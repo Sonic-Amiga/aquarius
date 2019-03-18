@@ -3,15 +3,9 @@
 #include <fstream>
 #include <string>
 
-#include "owfs_hw.h"
+#include "fileio_hw.h"
 
-OWFS_DS18xx::OWFS_DS18xx(const char* path, float thresh) :
-    Thermometer(thresh),  m_Path(std::string(path) + "/temperature9")
-{
-
-}
-
-float OWFS_DS18xx::Measure()
+float FileIOThermometer::Measure()
 {
     std::fstream f(m_Path.c_str(), std::fstream::in);
     float val;

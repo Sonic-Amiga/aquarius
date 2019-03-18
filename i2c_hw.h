@@ -3,14 +3,14 @@
 
 #include "hardware.h"
 
-class I2CPort
+class I2CPort : public Hardware
 {
 public:
     virtual bool Read(void* data, unsigned int size) {return true; }
     virtual bool Write(void* data, unsigned int size) {return true; }
 };
 
-class I2C_pcf857x
+class I2C_pcf857x : public Hardware
 {
 public:
 

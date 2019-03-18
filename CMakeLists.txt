@@ -1,11 +1,11 @@
 set (SRCS main.cpp
+          fileio_hw.cpp
           httpd.cpp
           hwconfig.cpp
           hwstate.cpp
           hardware.cpp
           i2c_hw.cpp
           logging.cpp
-          owfs_hw.cpp
           userdb.cpp
           wiringpi_hw.cpp)
 

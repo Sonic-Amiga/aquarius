@@ -1,5 +1,5 @@
 #include "hwconfig.h"
-#include "owfs_hw.h"
+#include "fileio_hw.h"
 #include "wiringpi_hw.h"
 
 HWConfig::HWConfig()
@@ -10,7 +10,7 @@ HWConfig::HWConfig()
     m_ioExt1 = new I2C_pcf857x(new WPII2C(0x20), 16);
 
     // Hot water supply thermometer
-    AddHardware("HST", new OWFS_DS18xx("/mnt/1wire/28.9C09E91B1302", 45.0), "Hot supply");
+    AddHardware("HST", new FileIOThermometer("/mnt/1wire/28.9C09E91B1302/temperature9", 45.0), "Hot supply");
 
     // Cold supply
     AddHardware("CS", new Valve(30,
@@ -43,7 +43,7 @@ HWConfig::HWConfig()
     AddHardware("HP", m_ioExt1->newSwitch(6, true), "Heater pressure");
 
     // Heater thermometer
-    AddHardware("HT", new OWFS_DS18xx("/mnt/1wire/28.9C09E91B1301", 45.0), "Heater");
+    AddHardware("HT", new FileIOThermometer("/mnt/1wire/28.9C09E91B1301/temperature9", 45.0), "Heater");
 
     // Leak detectors
     AddLeakDetector("LD0", m_ioExt1->newSwitch(3, true), "Zone 0");
