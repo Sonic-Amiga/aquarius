@@ -1,0 +1,438 @@
+<html>
+<head>
+<style>
+.controls {
+    height: 60%;
+    overflow: auto;
+}
+.log {
+    height: 30%;
+    overflow: auto;
+    border: 2px solid black;
+    background-color: lightblue;
+}
+p {
+  border: 2px solid black;
+  background-color: lightblue;
+}
+@keyframes blink-red {
+  0%   {background-color:red; color:white;}
+  49%   {background-color:red; color:white;}
+  50%  {background-color:transparent; color:red;}
+}
+@keyframes blink-orange {
+  0%  {background-color:orange; color:white;}
+  49% {background-color:orange; color:white;}
+  50% {background-color:transparent; color:orange;}
+}
+@keyframes blink-blue {
+  0%  {background-color:blue; color:white}
+  49% {background-color:blue; color:white}
+  50% {background-color:transparent; color:blue}
+}
+@keyframes blink-green {
+  0%  {background-color:green; color:white}
+  49% {background-color:green; color:white}
+  50% {background-color:transparent; color:green}
+}
+@keyframes blink-white {
+  0%  {background-color:white; color:black}
+  49% {background-color:white; color:black}
+  50% {background-color:transparent; color:black}
+}
+.status-blink-red {
+    animation: blink-red 0.5s infinite;
+}
+.status-blink-orange {
+    animation: blink-orange 0.5s infinite;
+}
+.status-blink-blue {
+    animation: blink-blue 0.5s infinite;
+}
+.status-blink-green {
+    animation: blink-green 0.5s infinite;
+}
+.status-blink-white {
+    animation: blink-white 0.5s infinite;
+}
+.status-green {
+  background-color: green;
+  color: white;
+}
+.status-red {
+  background-color: red;
+  color: white;
+}
+.status-orange {
+  background-color: orange;
+  color: white;
+}
+.status-blue {
+  background-color: blue;
+  color: white;
+}
+.status-black {
+  background-color: black;
+  color: white;
+}
+.control-mode {
+    text-align: center;
+}
+.system-state {
+    text-align: center;
+}
+.valve-status {
+    width: 80px;
+    text-align: center;
+}
+.leak-status {
+    width: 150px;
+    text-align: center;
+}
+.leak-sensor-status {
+    width: 50px;
+    text-align: center;
+}
+.heater-status {
+    width: 70px;
+    text-align: center;
+}
+.temp-value {
+    width: 70px;
+    text-align: center;
+}
+
+</style>
+<script>
+var gSessionId = %SESSIONID%;
+
+function displayValue(id, value, style)
+{
+    var e = document.getElementById(id);
+
+    e.innerHTML = value;
+    if (e.className != style)
+        e.className = style;
+}
+
+function setStatus(id, state, names, styles)
+{
+    displayValue(id, names[state], styles[state]);
+}
+
+function decodeValveStatus(id, state)
+{
+    var str = ["Reset", "Closed", "Closing", "Opening", "Open", "Fault"];
+    var styles = ["status-black", "status-blue", "status-blink-blue", "status-blink-orange", "status-orange", "status-blink-red"];
+
+    setStatus(id, state, str, styles);
+}
+
+function decodeSystemStatus(state)
+{
+    var str = ["Fault",
+               "Closing", "Closed",
+               "Switching to central supply", "Running on central supply",
+               "Switching to heater", "Running on heater",
+               "Maintenance"];
+    var styles = ["status-blink-red",
+                  "status-blink-blue", "status-blue",
+                  "status-blink-green", "status-green",
+                  "status-blink-orange", "status-orange",
+                  "status-black"];
+
+    setStatus("sys", state, str, styles);
+}
+
+function decodeControlMode(state)
+{
+    var str = ["Auto", "Manual", "Maintenance"];
+    var styles = ["status-green", "status-blue", "status-orange"];
+
+    setStatus("mode", state, str, styles);
+}
+
+function decodeLeakStatus(state)
+{
+    var str = ["Fault", "Enabled", "Disabled", "Leak detected"];
+    var styles = ["status-blink-red", "status-green", "status-orange", "status-blink-orange"];
+
+    setStatus("leak", state, str, styles);
+}
+
+function decodeRelayStatus(id, state)
+{
+    var str = ["Off", "On"];
+    var styles = ["status-green", "status-orange"];
+
+    setStatus(id, state, str, styles);
+}
+
+function decodeLeakSensorStatus(id, state)
+{
+    var str = ["OK", "Alarm", "Fault"];
+    var styles = ["status-green", "status-blink-orange", "status-blink-red"];
+
+    setStatus(id, state, str, styles);
+}
+
+function decodeStatus(response)
+{
+    var status = JSON.parse(response);
+
+    for (id in status) {
+        if (id == "sys") {
+            decodeSystemStatus(status[id]);
+        } else if (id == "mode") {
+            decodeControlMode(status[id]);
+        } else if (id == "leak") {
+            decodeLeakStatus(status[id]);
+        } else if (id == "heater") {
+            var str = ["Fault", "OK", "Washing", "Protection", "Pressurize"];
+            var styles = ["status-blink-red", "status-green", "status-blink-blue", "status-blink-orange", "status-blue"];
+
+            setStatus(id, status[id], str, styles);
+        }
+    }
+    for (v in status.valves) {
+        decodeValveStatus(v, status.valves[v]);
+    }
+    for (r in status.relays) {
+        decodeRelayStatus(r, status.relays[r]);
+    }
+    for (s in status.switches) {
+        var str = ["Low", "Normal"];
+        var styles = ["status-orange", "status-green"];
+
+        setStatus(s, status.switches[s], str, styles);
+    }
+    for (t in status.thermometers) {
+        var state = status.thermometers[t].state;
+        var styles = ["status-blink-red", "status-blue", "status-orange"];
+        var value;
+
+        if (state == 0) {
+            value = "Fault";
+        } else {
+           value = status.thermometers[t].value;
+        }
+
+        displayValue(t, value, styles[state]);
+    }
+    for (s in status.leak_sensors) {
+        decodeLeakSensorStatus(s, status.leak_sensors[s]);
+    }
+    for (l in status.log) {
+        document.getElementById("log").innerHTML += status.log[l] + "<BR>";
+    }
+}
+
+function getXMLHttpRequest()
+{
+    if (window.XMLHttpRequest) {
+        // code for IE7+, Firefox, Chrome, Opera, Safari
+        xmlhttp = new XMLHttpRequest();
+    } else {
+        // code for IE6, IE5
+        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+    }
+
+    xmlhttp.onreadystatechange = function()
+    {
+        if (this.readyState == 4 && this.status == 200) {
+            decodeStatus(this.responseText);
+        }
+    };
+
+    return xmlhttp;
+}
+
+function setValve(id, action)
+{
+  xmlhttp = getXMLHttpRequest();
+  request = "valve?session=" + gSessionId + "&id=" + id;
+  if (action != "") {
+      request += "&action=" + action;
+  }
+  xmlhttp.open("GET", request, true);
+  xmlhttp.send();
+}
+
+function setRelay(id, action)
+{
+  xmlhttp = getXMLHttpRequest();  
+  request = "relay?session=" + gSessionId + "&id=" + id;
+  if (action != "") {
+      request += "&action=" + action;
+  }
+  xmlhttp.open("GET", request, true);
+  xmlhttp.send();
+}
+
+
+function setControl(action)
+{
+    xmlhttp = getXMLHttpRequest();
+    xmlhttp.open("GET", "control?session=" + gSessionId + "&mode=" + action, true);
+    xmlhttp.send();
+}
+
+function setState(action)
+{
+    xmlhttp = getXMLHttpRequest();
+    xmlhttp.open("GET", "control?session=" + gSessionId + "&state=" + action, true);
+    xmlhttp.send();
+}
+
+function setLeak(action)
+{
+    xmlhttp = getXMLHttpRequest();
+    xmlhttp.open("GET", "control?session=" + gSessionId + "&leak=" + action, true);
+    xmlhttp.send();
+}
+
+function setHeater(action)
+{
+    xmlhttp = getXMLHttpRequest();
+    xmlhttp.open("GET", "control?session=" + gSessionId + "&heater=" + action, true);
+    xmlhttp.send();
+}
+
+function getStatus()
+{
+    xmlhttp = getXMLHttpRequest();
+    xmlhttp.onreadystatechange = function()
+    {
+        if (this.readyState == 4) {
+            if (this.status == 200) {
+                decodeStatus(this.responseText);
+            } else if (this.status == 401) {
+                window.location.href = "/index.html";
+            } else {
+                var str = ["Link lost", ""];
+                var style = ["status-blink-red", ""];
+
+                setStatus("mode", 1, str, style);
+                setStatus("sys", 0, str, style);
+                setStatus("HST", 1, str, style);
+                setStatus("leak", 1, str, style);
+                setStatus("heater", 1, str, style);
+                setStatus("LD0", 1, str, style);
+                setStatus("LD1", 1, str, style);
+                setStatus("LD2", 1, str, style);
+                setStatus("LD3", 1, str, style);
+                setStatus("CS", 1, str, style);
+                setStatus("HS", 1, str, style);
+                setStatus("HI", 1, str, style);
+                setStatus("HO", 1, str, style);
+                setStatus("HR", 1, str, style);
+                setStatus("HD", 1, str, style);
+                setStatus("HP", 1, str, style);
+                setStatus("HT", 1, str, style);
+            }
+        }
+    };
+
+    xmlhttp.open("GET", "status?session=" + gSessionId, true);
+    xmlhttp.send();
+}
+
+function handleLoad()
+{
+    getStatus();
+    window.setInterval(getStatus, 1000);
+}
+</script>
+</head>
+<body onLoad="handleLoad()">
+<div class="controls">
+<p>
+<table>
+<tr><td>Control mode:</td><td class="control-mode"><div id="mode"></div></td></tr>
+<tr><td>Change mode:</td><td>
+<button onclick="setControl('auto')">Auto</button>
+<button onclick="setControl('manual')">Manual</button>
+<button onclick="setControl('maintenance')">Maintenance</button>
+</td></tr>
+</table>
+</p>
+<p>
+<table>
+<tr><td>Water supply state:</td><td class="system-state"><div id="sys"></div></td></tr>
+<tr><td>Manual control:</td><td>
+<button onclick="setState('closed')">Close all</button>
+<button onclick="setState('central')">Switch to central</button>
+<button onclick="setState('heater')">Switch to heater</button>
+</td></tr>
+<tr><td>Hot supply temp</td><td><div class="temp-value"><div id="HST"></div></div></td></tr>
+</table>
+</p>
+<p>
+Leak sensors:
+<table>
+<tr><td>Status:</td><td class="leak-status"><div id="leak"></div></td></tr>
+</table>
+<table>
+<tr><td>
+<button onclick="setLeak('enable')">Enable</button>
+<button onclick="setLeak('disable')">Disable</button>
+</td></tr>
+</table>
+<table>
+<tr>
+<td>Zone 1</td><td class="leak-sensor-status"><div id="LD0"></div></td><td>&nbsp;&nbsp;</td>
+<td>Zone 2</td><td class="leak-sensor-status"><div id="LD1"></div></td><td>&nbsp;&nbsp;</td>
+<td>Zone 3</td><td class="leak-sensor-status"><div id="LD2"></div></td><td>&nbsp;&nbsp;</td>
+<td>Zone 4</td><td class="leak-sensor-status"><div id="LD3"></div></td><td>&nbsp;&nbsp;</td>
+</tr>
+</table>
+</p>
+<p>
+Valves:
+<table>
+<tr><td>Cold supply</td><td class="valve-status"><div id="CS"></div></td><td>
+<button onclick="setValve('CS', 'open')">Open</button>
+<button onclick="setValve('CS', 'close')">Close</button>
+<button onclick="setValve('CS', 'reset')">Reset</button>
+</td></tr>
+<tr><td>Hot supply</td><td class="valve-status"><div id="HS"></div></td><td>
+<button onclick="setValve('HS', 'open')">Open</button>
+<button onclick="setValve('HS', 'close')">Close</button>
+<button onclick="setValve('HS', 'reset')">Reset</button>
+</td></tr>
+<tr><td>Heater in</td><td class="valve-status"><div id="HI"></div></td><td>
+<button onclick="setValve('HI', 'open')">Open</button>
+<button onclick="setValve('HI', 'close')">Close</button>
+<button onclick="setValve('HI', 'reset')">Reset</button>
+</td></tr>
+<tr><td>Heater out</td><td class="valve-status"><div id="HO"></div></td><td>
+<button onclick="setValve('HO', 'open')">Open</button>
+<button onclick="setValve('HO', 'close')">Close</button>
+<button onclick="setValve('HO', 'reset')">Reset</button>
+</td></tr>
+</table>
+</p>
+<p>
+<table>
+<tr><td>Heater state:</td><td colspan="2" class="heater-status"><div id="heater"></td>
+<td><button onclick="setHeater('wash')">Wash now</button></td>
+</tr>
+<tr><td>Power</td><td class="heater-status"><div id="HR"></div></td><td>
+<button onclick="setRelay('HR', 'on')">On</button>
+<button onclick="setRelay('HR', 'off')">Off</button>
+</td><td></td></tr>
+<tr><td>Drain valve</td><td class="heater-status"><div id="HD"></div></td><td>
+<button onclick="setRelay('HD', 'on')">Open</button>
+<button onclick="setRelay('HD', 'off')">Close</button>
+</td><td></td></tr>
+<tr><td>Pressure</td><td class="heater-status"><div id="HP"></div></td></tr>
+<tr><td>Temperature</td><td class="heater-status"><div id="HT"></div></td></tr>
+</table>
+</p>
+</div>
+<br>
+<div class="log" id="log">
+</div>
+<a href="/logout?session=%SESSIONID%">Logout</a>
+</body>
+</html>
