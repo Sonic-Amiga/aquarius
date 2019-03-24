@@ -7,11 +7,10 @@
 class Hardware
 {
 public:
-    Hardware() : m_name(nullptr) {}
     virtual ~Hardware() {}
 
-    const char* m_name;
-    const char* m_description;
+    std::string m_name;
+    std::string m_description;
 };
 
 class Relay : public Hardware

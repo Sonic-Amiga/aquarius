@@ -1,3 +1,5 @@
+project(Aquarius)
+
 set (SRCS main.cpp
           fileio_hw.cpp
           httpd.cpp
@@ -9,11 +11,13 @@ set (SRCS main.cpp
           userdb.cpp
           wiringpi_hw.cpp)
 
-set (LIBS microhttpd wiringPi)
+set (LIBS microhttpd wiringPi xml2)
 
 set (CMAKE_CXX_STANDARD 11)
+find_package(LibXml2 REQUIRED)
 
-project(Aquarius)
+include_directories(${LIBXML2_INCLUDE_DIR})
+
 add_executable(aquarius ${SRCS})
 target_link_libraries(aquarius ${LIBS})
 

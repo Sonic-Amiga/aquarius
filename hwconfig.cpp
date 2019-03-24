@@ -1,55 +1,324 @@
+#include <libxml/parser.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "hwconfig.h"
 #include "fileio_hw.h"
+#include "logging.h"
+#include "i2c_hw.h"
 #include "wiringpi_hw.h"
+
+static const char *const configPath = "/etc/aquarius/config.xml";
+
+/*
+ * DeviceType instances are static and their constructors are run during early
+ * program startup phase. Due to that we can't use any complex C++ constructs
+ * like std::map for building our device type database because they might need
+ * construction themselves. And we don't want to worry about constructors
+ * ordering which might me system-specific.
+ * Use something primitive, not requiring actual construction, like
+ * single-linked list. No worry about performance since we are using it only
+ * during XML config deserialization.
+ */
+static DeviceType *g_DeviceTypes = nullptr;
+
+DeviceType::DeviceType(const char *type)
+    : m_Type(type)
+{
+    m_Next = g_DeviceTypes;
+    g_DeviceTypes = this;
+}
+
+int GetIntProp(xmlNode *node, const char *name)
+{
+    const char *str = GetStrProp(node, name);
+
+    if (str) {
+        char *p;
+        int ret = strtol(str, &p, 0);
+
+        if (*p == 0)
+            return ret;
+    }
+
+    return -1;
+}
+
+float GetFloatProp(xmlNode *node, const char *name)
+{
+    const char *str = GetStrProp(node, name);
+
+    if (str) {
+        char *p;
+        float ret = strtof(str, &p);
+
+        if (*p == 0)
+            return ret;
+    }
+
+    return NAN;
+}
+
+Hardware *HWConfig::GetDeviceProp(xmlNode *node, const char *name)
+{
+    const char *str = GetStrProp(node, name);
+
+    if (str) {
+        return GetHardware<Hardware>(str);
+    } else {
+        return nullptr;
+    }
+}
+
+void HWConfig::readNodes(xmlNode *startNode, const char *name, void(HWConfig::*parserFunc)(xmlNode *))
+{
+    xmlNode *cur_node;
+
+    for (cur_node = startNode; cur_node; cur_node = cur_node->next) {
+        if ((cur_node->type == XML_ELEMENT_NODE) &&
+            !strcmp((const char *)cur_node->name, name))
+        {
+            (this->*parserFunc)(cur_node);
+        }
+    }
+}
+
+static void setId(Hardware *dev, xmlNode *node)
+{
+    const char *id = GetStrProp(node, "id");
+
+    if (id)
+        dev->m_name = id;
+}
+
+Hardware *HWConfig::createDevice(xmlNode *node)
+{
+    const char *type = GetStrProp(node, "type");
+    DeviceType *dt;
+
+    if (!type) {
+        Log(Log::ERROR) << "Malformed configuration element " << node->name;
+        return nullptr;
+    }
+
+    for (dt = g_DeviceTypes; dt; dt = dt->m_Next) {
+        if (!strcmp(dt->m_Type, type))
+            break;
+    }
+
+    if (!dt) {
+        Log(Log::ERROR) << "Unknown device type " << type;
+        return nullptr;
+    }
+
+    Hardware *dev = dt->CreateDevice(node, this);
+
+    if (dev) {
+        // Optional fields: id and description
+        // id is required for referencing and status display
+        setId(dev, node);
+
+        // description will mostly be filled in automatically by logic components,
+        // but for leak sensors it is supposed to describe the physical location
+        const char *desc = GetStrProp(node, "description");
+        if (desc)
+            dev->m_description = desc;
+    }
+
+    return dev;
+}
+
+void HWConfig::createBus(xmlNode *node)
+{
+    m_Parent = createDevice(node);
+    AddHardware(m_Parent);
+    readNodes(node->children, "device", &HWConfig::createDeviceOnBus);
+    m_Parent = nullptr;
+}
+
+void HWConfig::createDeviceOnBus(xmlNode *node)
+{
+    Hardware *dev = createDevice(node);
+    AddHardware(dev);
+}
+
+void HWConfig::createHeater(xmlNode *heaterNode)
+{
+    xmlNode *node;
+
+    for (node = heaterNode->children; node; node = node->next) {
+        if (node->type == XML_ELEMENT_NODE) {
+            const char *name = (const char *)node->name;
+            Hardware *dev;
+
+            if (!strcmp(name, "power_relay")) {
+               dev = createDevice(node);
+            } else if (!strcmp(name, "drain_relay")) {
+               dev = createDevice(node);
+            } else if (!strcmp(name, "pressure_switch")) {
+               dev = createDevice(node);
+            } else if (!strcmp(name, "temp_sensor")) {
+               dev = createDevice(node);
+            } else {
+                Log(Log::ERROR) << "Unknown heater controller component \"" << name << '"';
+                continue;
+            }
+
+            // TODO: Properly create HeaterController here and connect inputs
+
+            AddHardware(dev);
+        }
+    }
+}
+
+void HWConfig::createLeakDetector(xmlNode *heaterNode)
+{
+    xmlNode *node;
+
+    for (node = heaterNode->children; node; node = node->next) {
+        if (node->type == XML_ELEMENT_NODE) {
+            const char *name = (const char *)node->name;
+            Hardware *dev;
+
+            if (!strcmp(name, "switch")) {
+                dev = createDevice(node);
+            } else {
+                Log(Log::ERROR) << "Unknown leak detector component \"" << name << '"';
+                continue;
+            }
+
+            Switch *sw = dynamic_cast<Switch *>(dev);
+            if (sw) {
+                AddLeakSensor(sw);
+            } else {
+                Log(Log::ERROR) << "Only switches are currently supported as leak sensor inputs";
+            }
+        }
+    }
+}
+
+void HWConfig::createValveController(xmlNode *vcNode)
+{
+    xmlNode *node;
+
+    for (node = vcNode->children; node; node = node->next) {
+        if (node->type == XML_ELEMENT_NODE) {
+            const char *name = (const char *)node->name;
+            Hardware *dev;
+
+            if (!strcmp(name, "cold_supply")) {
+               dev = createValve(node);
+            } else if (!strcmp(name, "hot_supply")) {
+               dev = createValve(node);
+            } else if (!strcmp(name, "heater_in")) {
+               dev = createValve(node);
+            } else if (!strcmp(name, "heater_out")) {
+               dev = createValve(node);
+            } else if (!strcmp(name, "hot_supply_temp")) {
+               dev = createDevice(node);
+            } else {
+                Log(Log::ERROR) << "Unknown valve controller component \""
+                                << name << '"';
+                continue;
+            }
+
+            // TODO: Properly create HWState here and connect inputs
+
+            AddHardware(dev);
+        }
+    }
+}
+
+Valve *HWConfig::createValve(xmlNode *vNode)
+{
+    int timeout = GetIntProp(vNode, "timeout");
+    Relay *openRelay = nullptr;
+    Relay *closeRelay = nullptr;
+    Switch *openSwitch = nullptr;
+    Switch *closedSwitch = nullptr;
+    xmlNode *node;
+
+    if (timeout == -1) {
+        Log(Log::ERROR) << "Invalid valve timeout value in the config";
+        return nullptr;
+    }
+
+    for (node = vNode->children; node; node = node->next) {
+        if (node->type == XML_ELEMENT_NODE) {
+            const char *name = (const char *)node->name;
+
+            if (!strcmp(name, "close_relay")) {
+                closeRelay = dynamic_cast<Relay *>(createDevice(node));
+            } else if (!strcmp(name, "open_relay")) {
+                openRelay = dynamic_cast<Relay *>(createDevice(node));
+            } else if (!strcmp(name, "closed_switch")) {
+                closedSwitch = dynamic_cast<Switch *>(createDevice(node));
+            } else if (!strcmp(name, "open_switch")) {
+                openSwitch = dynamic_cast<Switch *>(createDevice(node));
+            } else {
+                Log(Log::ERROR) << "Unknown valve component " << name;
+            }
+
+            // Note no AddHardware() here. Valve owns its components.
+        }
+    }
+
+    // Relays are mandatory, switches are not. Cheap valve motors don't have them.
+    if (closeRelay && openRelay) {
+        Valve *v = new Valve(timeout, openRelay, closeRelay, openSwitch, closedSwitch);
+
+        setId(v, vNode);
+        return v;
+    } else {
+        Log(Log::ERROR) << "Valve relay definition is invalid or missing";
+
+        if (closeRelay) {
+            delete closeRelay;
+        }
+        if (openRelay) {
+            delete openRelay;
+        }
+        if (closedSwitch) {
+            delete closedSwitch;
+        }
+        if (openSwitch) {
+            delete openSwitch;
+        }
+
+        return nullptr;
+    }
+}
 
 HWConfig::HWConfig()
 {
-    // Simple hardcoded conviguration
+    LIBXML_TEST_VERSION
+    xmlDoc *doc = xmlReadFile(configPath, NULL, 0);
 
-    // PCF8575, 16 bits
-    m_ioExt1 = new I2C_pcf857x(new WPII2C(0x20), 16);
+    if (doc == NULL) {
+        fatal("Could not parse configuration file %s", configPath);
+    }
 
-    // Hot water supply thermometer
-    AddHardware("HST", new FileIOThermometer("/mnt/1wire/28.9C09E91B1302/temperature9", 45.0), "Hot supply");
+    xmlNode *root = xmlDocGetRootElement(doc);
+    xmlNode *cur_node = nullptr;
+    xmlNode *startNode = nullptr;
 
-    // Cold supply
-    AddHardware("CS", new Valve(30,
-                                new WPIRelay(0, true), new WPIRelay(1, true),
-                                m_ioExt1->newSwitch(8, true), m_ioExt1->newSwitch(9, true)),
-                                "Cold supply");
-    // Hot supply
-    AddHardware("HS", new Valve(30,
-                                new WPIRelay(2, true), new WPIRelay(3, true),
-                                m_ioExt1->newSwitch(10, true), m_ioExt1->newSwitch(11, true)),
-                                "Hot supply");
-    // Heater in
-    AddHardware("HI", new Valve(30,
-                                new WPIRelay(22, true), new WPIRelay(23, true),
-                                m_ioExt1->newSwitch(12, true), m_ioExt1->newSwitch(13, true)),
-                                "Heater in");
-    // Heater out
-    AddHardware("HO", new Valve(30,
-                                new WPIRelay(24, true), new WPIRelay(25, true),
-                                m_ioExt1->newSwitch(14, true), m_ioExt1->newSwitch(15, true)),
-                                "Heater out");
+    for (cur_node = root; cur_node; cur_node = cur_node->next) {
+        if (cur_node->type == XML_ELEMENT_NODE) {
+            startNode = cur_node->children;
+            break;
+        }
+    }
 
-    // Heater drain
-    AddHardware("HD", new WPIRelay(13, true), "Heater drain");
+    if (startNode) {
+        readNodes(startNode, "bus", &HWConfig::createBus);
+        readNodes(startNode, "heater_controller", &HWConfig::createHeater);
+        readNodes(startNode, "leak_detector", &HWConfig::createLeakDetector);
+        readNodes(startNode, "valve_controller", &HWConfig::createValveController);
+    }
 
-    // Heater relay
-    AddHardware("HR", new WPIRelay(12, true), "Heater relay");
-
-    // Heater pressure switch
-    AddHardware("HP", m_ioExt1->newSwitch(6, true), "Heater pressure");
-
-    // Heater thermometer
-    AddHardware("HT", new FileIOThermometer("/mnt/1wire/28.9C09E91B1301/temperature9", 45.0), "Heater");
-
-    // Leak detectors
-    AddLeakDetector("LD0", m_ioExt1->newSwitch(3, true), "Zone 0");
-    AddLeakDetector("LD1", m_ioExt1->newSwitch(2, true), "Zone 1");
-    AddLeakDetector("LD2", m_ioExt1->newSwitch(1, true), "Zone 2");
-    AddLeakDetector("LD3", m_ioExt1->newSwitch(0, true), "Zone 3");
+    xmlFreeDoc(doc);
+    xmlCleanupParser();
 }
 
 HWConfig::~HWConfig()
@@ -62,5 +331,6 @@ HWConfig::~HWConfig()
     for (auto hw : m_LeakDetectors)
         delete hw;
 
-    delete m_ioExt1;
+    for (auto hw : m_AnonHW)
+        delete hw;
 }

@@ -59,6 +59,11 @@ HeaterController::HeaterController(HWState* hw, HWConfig* cfg)
     m_Heater   = cfg->GetHardware<Relay>("HR");
     m_Drain    = cfg->GetHardware<Relay>("HD");
     m_Pressure = cfg->GetHardware<Switch>("HP");
+
+    // We know functions, so we know descriptions
+    m_Heater->m_description = "Heater relay";
+    m_Drain->m_description = "Heater drain";
+    m_Pressure->m_description = "Heater pressure";
 }
 
 void HeaterController::SetState(int state)
@@ -213,6 +218,12 @@ HWState::HWState(HWConfig* cfg)
     m_HS = cfg->GetHardware<Valve>("HS"); // Hot Supply
     m_HI = cfg->GetHardware<Valve>("HI"); // Heater in
     m_HO = cfg->GetHardware<Valve>("HO"); // Heater out
+
+    // We know functions, so we know descriptions
+    m_CS->m_description = "Cold supply";
+    m_HS->m_description = "Hot supply";
+    m_HI->m_description = "Heater input";
+    m_HO->m_description = "Heater output";
 
     m_LeakSensor = new LeakSensor(cfg);
     m_Heater     = new HeaterController(this, cfg);
