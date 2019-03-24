@@ -22,10 +22,10 @@
         <open_switch type="PCFSwitch" device="PCF0" pin="13" inverted="1"/>
     </heater_in>
     <heater_out id="HO" timeout="30">
-        <close_relay type="WPIRelay" pin="22" inactive="1"/>
-        <open_relay type="WPIRelay" pin="23" inactive="1"/>
-        <closed_switch type="PCFSwitch" device="PCF0" pin="12" inverted="1"/>
-        <open_switch type="PCFSwitch" device="PCF0" pin="13" inverted="1"/>
+        <close_relay type="WPIRelay" pin="24" inactive="1"/>
+        <open_relay type="WPIRelay" pin="25" inactive="1"/>
+        <closed_switch type="PCFSwitch" device="PCF0" pin="14" inverted="1"/>
+        <open_switch type="PCFSwitch" device="PCF0" pin="15" inverted="1"/>
     </heater_out>
     <hot_supply_temp id="HST" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1302/temperature9" threshold="45"/>
 </valve_controller>
