@@ -1,0 +1,4 @@
+# In this script you may add commands which are executed by systemd
+# before aquarius starts up
+
+owfs /mnt/1wire

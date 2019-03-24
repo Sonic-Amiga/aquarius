@@ -1,0 +1,15 @@
+[Unit]
+Description=Aquarius opensource home water supply controller
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/aquarius/start-script
+ExecStart=/usr/local/bin/aquarius
+KillMode=process
+Restart=on-failure
+RestartPreventExitStatus=255
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+Alias=aquarius.service
