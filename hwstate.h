@@ -108,10 +108,14 @@ public:
 
     void Poll();
 
-    state_t             GetState();
-    int                 SetState(state_t state);
-    ctlmode_t           GetMode() {return m_mode; }
-    void                SetMode(ctlmode_t mode);
+    state_t GetState()
+    {
+        return m_state;
+    }
+
+    int       SetState(state_t state);
+    ctlmode_t GetMode() {return m_mode; }
+    void      SetMode(ctlmode_t mode);
 
     LeakSensor::status_t GetLeakState() {return m_LeakSensor->GetState();}
     int                  SetLeakState(LeakSensor::status_t);
@@ -119,12 +123,31 @@ public:
     int                  SetHeaterState(int state);
 
     void HeaterWash(bool on);
-    bool InFinalState();
+    static bool IsFinalState(state_t);
+
+    bool InFinalState()
+    {
+        return IsFinalState(m_state);
+    }
 
     int ValveControl(const char* id, int& state);
     int RelayControl(const char* id, bool& state);
 
 private:
+    struct SavedState
+    {
+        int CalcCheck()
+        {
+            return ((int)State + (int)Mode) ^ 0x55AA55AA;
+        }
+
+        state_t   State;
+        ctlmode_t Mode;
+        int       Check;
+    };
+
+    bool LoadState();
+    bool SaveState(state_t state, ctlmode_t mode);
     void ApplyState(state_t state);
 
     HWConfig* m_Cfg;

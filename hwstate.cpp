@@ -1,6 +1,8 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "hwstate.h"
 #include "logging.h"
@@ -14,7 +16,6 @@ LeakSensor::LeakSensor(HWConfig* cfg) : m_state(Enabled)
     for (int i = 0; i < m_Sensors.size(); i++)
         m_SensorState[i] = Switch::Off;
 }
-
 
 bool LeakSensor::Poll()
 {
@@ -209,6 +210,18 @@ static const char *modeStrings[] =
     "Maintenance"
 };
 
+static const char *stateStrings[] =
+{
+    "Fault",
+    "Closing",
+    "Closed",
+    "Switch to cenral",
+    "Central",
+    "Switch to heater",
+    "Heater",
+    "Maintenance"
+};
+
 HWState::HWState(HWConfig* cfg)
     : m_Cfg(cfg), m_state(Maintenance), m_mode(Manual)
 {
@@ -227,6 +240,10 @@ HWState::HWState(HWConfig* cfg)
 
     m_LeakSensor = new LeakSensor(cfg);
     m_Heater     = new HeaterController(this, cfg);
+
+    if (!LoadState()) {
+        Log(Log::ERROR) << "Could not read saved status; fall back to default!";
+    }
 }
 
 HWState::~HWState()
@@ -235,6 +252,86 @@ HWState::~HWState()
     delete m_Heater;
 
     pthread_mutex_destroy(&m_Lock);
+}
+
+// /var/run is tmpfs on OrangePI
+static const char *stateFile = "/var/aquarius.state";
+
+bool HWState::LoadState()
+{
+    struct SavedState st;
+    int fd = open(stateFile, O_RDONLY);
+
+    // The file must exist and be readable
+    if (fd == -1) {
+        return false;
+    }
+
+    size_t s = read(fd, &st, sizeof(st));
+
+    close(fd);
+
+    // File length must be correct
+    if (s != sizeof(st)) {
+        return false;
+    }
+    // State field cannot contain garbage
+    if (!IsFinalState(st.State)) {
+        return false;
+    }
+    // Mode field cannot contain garbage
+    if ((unsigned int)st.Mode > (unsigned int)FullManual) {
+       return false;
+    }
+    // Check value must be correct
+    if (st.CalcCheck() != st.Check) {
+        return false;
+    }
+
+    m_mode = st.Mode;
+    if (m_mode == Manual) {
+        // In auto mode we'll deduce the state to set, and 
+        // in Maintenance mode we only do what operator is telling
+        Log(Log::INFO) << "Bringing back manual control state: "
+                       << stateStrings[st.State];
+        ApplyState(st.State);
+    }
+
+    return true;
+}
+
+bool HWState::SaveState(state_t state, ctlmode_t mode)
+{
+    struct SavedState st;
+    bool ok;
+
+    st.State = state;
+    st.Mode  = mode;
+    st.Check = st.CalcCheck();
+
+    int fd = open(stateFile, O_CREAT|O_TRUNC|O_WRONLY, 0600);
+
+    if (fd == -1) {
+        ok = false;
+    } else {
+        ok = true;
+
+        // We want to be sure that write has completed successfully
+        if (write(fd, &st, sizeof(st)) != sizeof(st))
+            ok = false;
+#ifdef __unix__
+        if (fsync(fd))
+            ok = false;
+#endif
+        if (close(fd))
+            ok = false;
+    }
+
+    if (!ok) {
+        Log(Log::ERROR) << "Unable to save status file";
+    }
+
+    return ok;
 }
 
 void HWState::Poll()
@@ -363,6 +460,10 @@ void HWState::ApplyState(state_t state)
         m_HS->SetState(Valve::Closed);
         m_state = SwitchToHeater;
         break;
+
+    default:
+        m_state = state;
+        break;
     }
 
     m_step = 0;
@@ -378,15 +479,11 @@ void HWState::HeaterWash(bool on)
     }
 }
 
-bool HWState::InFinalState()
+bool HWState::IsFinalState(state_t state)
 {
-    return (m_state == Closed) || (m_state == Central) ||
-           (m_state == Heater) || (m_state == Maintenance);
-}
-
-HWState::state_t HWState::GetState()
-{
-    return m_state;
+    // Returns true for non-transient states
+    return (state == Closed) || (state == Central) ||
+           (state == Heater) || (state == Maintenance);
 }
 
 int HWState::SetState(state_t state)
@@ -405,6 +502,7 @@ int HWState::SetState(state_t state)
         ret = EPERM;
         reason = "leak detected";
     } else if (m_mode != Auto) {
+        SaveState(state, m_mode);
         ret = 0;
         ApplyState(state);
     } else {
@@ -427,6 +525,7 @@ void HWState::SetMode(ctlmode_t mode)
 
     pthread_mutex_lock(&m_Lock);
 
+    SaveState(m_state, mode);
     m_mode = mode;
 
     pthread_mutex_unlock(&m_Lock);
