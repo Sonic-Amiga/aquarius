@@ -32,7 +32,7 @@
 <heater_controller>
     <power_relay id="HR" type="WPIRelay" pin="12" inactive="1"/>
     <drain_relay id="HD" type="WPIRelay" pin="13" inactive="1"/>
-    <pressure_switch id="HP" type="PCFSwitch" device="PCF0" pin="11" inverted="1"/>
+    <pressure_switch id="HP" type="PCFSwitch" device="PCF0" pin="6" inverted="1"/>
     <temp_sensor id="HT" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1301/temperature9" threshold="45"/>
 </heater_controller>
 <leak_detector>
