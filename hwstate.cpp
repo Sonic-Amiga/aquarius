@@ -6,6 +6,7 @@
 
 #include "hwstate.h"
 #include "logging.h"
+#include "utils.h"
 #include "wiringpi_hw.h"
 
 LeakSensor::LeakSensor(HWConfig* cfg) : m_state(Enabled)
@@ -137,19 +138,19 @@ void HeaterController::Poll(int s_HI)
         {
             if (m_washStep == WashStep::Fill) {
                 m_Drain->SetState(true);
-                m_washTimer = time(NULL) + WashDelay;
+                m_washTimer = GetMonotonicTime() + WashDelay;
                 m_washStep = WashStep::Drain;
             }
-            if ((m_washStep == WashStep::Drain) && (time(NULL) > m_washTimer)) {
+            if ((m_washStep == WashStep::Drain) && (GetMonotonicTime() > m_washTimer)) {
                 m_Drain->SetState(false);
-                m_washTimer = time(NULL) + RefillDelay;
+                m_washTimer = GetMonotonicTime() + RefillDelay;
                 m_washStep = WashStep::Refill;
             }
             if (m_washStep == WashStep::Refill) {
                 switch (s_HP)
                 {
                 case Switch::Off:
-                    if (time(NULL) > m_washTimer) {
+                    if (GetMonotonicTime() > m_washTimer) {
                         Log(Log::WARN) << "Heater failed to re-pressurize";
                         ApplyState(Protection);
                     }
@@ -290,6 +291,11 @@ bool HWState::LoadState()
 
     m_mode = st.Mode;
     if (m_mode == Manual) {
+        // After we exit relays stay in their original states, but configuring
+        // I/O hardware switches all of them off. Wait 0.5 sec before
+        // turning back on some of them; quickly pulsing them isn't good for
+        // electronics
+        usleep(500000);
         // In auto mode we'll deduce the state to set, and 
         // in Maintenance mode we only do what operator is telling
         Log(Log::INFO) << "Bringing back manual control state: "

@@ -7,6 +7,7 @@
 
 #include "logging.h"
 #include "userdb.h"
+#include "utils.h"
 
 static std::map<unsigned long, Session*> g_Sessions;
 static std::mutex g_Lock;
@@ -118,7 +119,7 @@ Session::Session(const char* user, const std::string &connId)
 
 void Session::Refresh()
 {
-    m_UseTime = time(nullptr) + ExpireTime;
+    m_UseTime = GetMonotonicTime() + ExpireTime;
 }
 
 std::ostream &operator<<(std::ostream& os, const Session& s)
@@ -185,7 +186,7 @@ void CheckSessions()
     for (auto it : g_Sessions) {
         Session* s = it.second;
 
-        if (time(nullptr) > s->m_UseTime) {
+        if (GetMonotonicTime() > s->m_UseTime) {
             g_Sessions.erase(s->m_Id);
             expired.push_back(s);
         }

@@ -3,6 +3,7 @@
 
 #include "hardware.h"
 #include "logging.h"
+#include "utils.h"
 
 const char* const Relay::statusStrings[] =
 {
@@ -99,7 +100,7 @@ bool Valve::SetState(int state, bool force)
             m_OpenPin->SetState(true);
             if (m_State != Open) {
                 if (m_State != Opening)
-                    m_StateChange = time(NULL);
+                    m_StateChange = GetMonotonicTime();
                 m_State = Opening;
             }
             break;
@@ -109,7 +110,7 @@ bool Valve::SetState(int state, bool force)
             m_ClosePin->SetState(true);
             if (m_State != Closed) {
                 if (m_State != Closing)
-                    m_StateChange = time(NULL);
+                    m_StateChange = GetMonotonicTime();
                 m_State = Closing;
             }
             break;
@@ -132,7 +133,7 @@ void Valve::Poll()
     GetStateFromSwitches();
 
     if ((m_State == Opening) || (m_State == Closing)) {
-        if (time(NULL) - m_StateChange > m_StateChangeTimeout) {
+        if (GetMonotonicTime() - m_StateChange > m_StateChangeTimeout) {
             // Timeout exceeded, mechanical fault
             Log(Log::ERROR) << "Valve " << m_name << ' ' << statusStrings[m_State] << " timeout";
             m_State = Fault;
