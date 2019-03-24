@@ -1,0 +1,12 @@
+[Unit]
+Description=1-wire filesystem FUSE mount
+Documentation=man:owfs(1)
+After=owserver.service
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/owfs /mnt/1wire
+ExecStop=/usr/bin/umount /mnt/1wire
+
+[Install]
+WantedBy=multi-user.target
