@@ -4,36 +4,36 @@
 </bus>
 <valve_controller>
     <cold_supply id="CS" timeout="30">
-        <close_relay type="WPIRelay" pin="0" inactive="1"/>
-        <open_relay type="WPIRelay" pin="1" inactive="1"/>
-        <closed_switch type="PCFSwitch" device="PCF0" pin="8" inverted="1"/>
-        <open_switch type="PCFSwitch" device="PCF0" pin="9" inverted="1"/>
+        <close_relay type="WPIRelay" pin="1" inactive="1"/>
+        <open_relay type="WPIRelay" pin="0" inactive="1"/>
+        <closed_switch type="PCFSwitch" device="PCF0" pin="9" inverted="1"/>
+        <open_switch type="PCFSwitch" device="PCF0" pin="8" inverted="1"/>
     </cold_supply>
     <hot_supply id="HS" timeout="30">
-        <close_relay type="WPIRelay" pin="2" inactive="1"/>
-        <open_relay type="WPIRelay" pin="3" inactive="1"/>
-        <closed_switch type="PCFSwitch" device="PCF0" pin="10" inverted="1"/>
-        <open_switch type="PCFSwitch" device="PCF0" pin="11" inverted="1"/>
+        <close_relay type="WPIRelay" pin="3" inactive="1"/>
+        <open_relay type="WPIRelay" pin="2" inactive="1"/>
+        <closed_switch type="PCFSwitch" device="PCF0" pin="11" inverted="1"/>
+        <open_switch type="PCFSwitch" device="PCF0" pin="10" inverted="1"/>
     </hot_supply>
     <heater_in id="HI" timeout="30">
-        <close_relay type="WPIRelay" pin="22" inactive="1"/>
-        <open_relay type="WPIRelay" pin="23" inactive="1"/>
-        <closed_switch type="PCFSwitch" device="PCF0" pin="12" inverted="1"/>
-        <open_switch type="PCFSwitch" device="PCF0" pin="13" inverted="1"/>
+        <close_relay type="WPIRelay" pin="23" inactive="1"/>
+        <open_relay type="WPIRelay" pin="22" inactive="1"/>
+        <closed_switch type="PCFSwitch" device="PCF0" pin="13" inverted="1"/>
+        <open_switch type="PCFSwitch" device="PCF0" pin="12" inverted="1"/>
     </heater_in>
     <heater_out id="HO" timeout="30">
-        <close_relay type="WPIRelay" pin="24" inactive="1"/>
-        <open_relay type="WPIRelay" pin="25" inactive="1"/>
-        <closed_switch type="PCFSwitch" device="PCF0" pin="14" inverted="1"/>
-        <open_switch type="PCFSwitch" device="PCF0" pin="15" inverted="1"/>
+        <close_relay type="WPIRelay" pin="25" inactive="1"/>
+        <open_relay type="WPIRelay" pin="24" inactive="1"/>
+        <closed_switch type="PCFSwitch" device="PCF0" pin="15" inverted="1"/>
+        <open_switch type="PCFSwitch" device="PCF0" pin="14" inverted="1"/>
     </heater_out>
-    <hot_supply_temp id="HST" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1302/temperature9" threshold="45"/>
+    <hot_supply_temp id="HST" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1301/temperature9" threshold="45"/>
 </valve_controller>
 <heater_controller>
     <power_relay id="HR" type="WPIRelay" pin="12" inactive="1"/>
     <drain_relay id="HD" type="WPIRelay" pin="13" inactive="1"/>
     <pressure_switch id="HP" type="PCFSwitch" device="PCF0" pin="6" inverted="1"/>
-    <temp_sensor id="HT" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1301/temperature9" threshold="45"/>
+    <temp_sensor id="HT" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1302/temperature9" threshold="45"/>
 </heater_controller>
 <leak_detector>
     <switch id="LD0" type="PCFSwitch" device="PCF0" pin="3" inverted="1" description="Zone 0"/>
