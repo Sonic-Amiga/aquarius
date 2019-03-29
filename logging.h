@@ -37,10 +37,13 @@ void fatal(const char *fmt, ...);
 class LogListener
 {
 public:
-    LogListener();
-    virtual ~LogListener();
+	virtual ~LogListener()
+	{}
 
     virtual void Write(const std::string& line) = 0;
 };
+
+void AddLogListener(LogListener *);
+void RemoveLogListener(LogListener *);
 
 #endif

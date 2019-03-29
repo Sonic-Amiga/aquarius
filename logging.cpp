@@ -9,6 +9,27 @@
 static std::vector<LogListener *> g_Listeners;
 static std::mutex g_Lock;
 
+void AddLogListener(LogListener *l)
+{
+	g_Lock.lock();
+	g_Listeners.push_back(l);
+	g_Lock.unlock();
+}
+
+void RemoveLogListener(LogListener *l)
+{
+	g_Lock.lock();
+
+	for (auto it = g_Listeners.begin(); it != g_Listeners.end(); it++) {
+		if (*it == l) {
+			g_Listeners.erase(it);
+			break;
+		}
+	}
+
+	g_Lock.unlock();
+}
+
 static const char* logTags[] =
 {
     "ERROR",
@@ -33,27 +54,6 @@ Log::~Log()
 
     for (LogListener* l : g_Listeners) {
         l->Write(text);
-    }
-
-    g_Lock.unlock();
-}
-
-LogListener::LogListener()
-{
-    g_Lock.lock();
-    g_Listeners.push_back(this);
-    g_Lock.unlock();
-}
-
-LogListener::~LogListener()
-{
-    g_Lock.lock();
-
-    for (auto it = g_Listeners.begin(); it != g_Listeners.end(); it++) {
-        if (*it == this) {
-            g_Listeners.erase(it);
-            break;
-        }
     }
 
     g_Lock.unlock();

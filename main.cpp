@@ -51,10 +51,11 @@ private:
 int main(void)
 {
 #ifdef _WIN32
-	ConsoleLog conLog;
+	ConsoleLog mainLog;
 #else
-	FileLog fileLog("/var/log/aquarius.log");
+	FileLog mainLog("/var/log/aquarius.log");
 #endif
+	AddLogListener(&mainLog);
     InitUserDB();
 
     HWConfig* theConfig = new HWConfig();
@@ -72,6 +73,7 @@ int main(void)
     delete theServer;
     delete theState;
     delete theConfig;
+	RemoveLogListener(&mainLog);
 
     return 0;
 }

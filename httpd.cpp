@@ -106,7 +106,14 @@ class HTTPSession : public Session, public LogListener
 {
 public:
     HTTPSession(const char* user, const std::string& connId) : Session(user, connId)
-    {}
+    {
+		AddLogListener(this);
+	}
+
+	virtual ~HTTPSession()
+	{
+		RemoveLogListener(this);
+	}
 
     std::vector<std::string> Read()
     {
