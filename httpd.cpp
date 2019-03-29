@@ -341,7 +341,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                 else if (!strcmp(action, "reset"))
                     state = Valve::Reset;
 
-                int err = m_hwState->ValveControl(id, state);
+                int err = m_hwState->ValveControl(id, state, s->GetConnStr());
 
                 if (err == 0) {
                     output << "{\"valves\":";
@@ -373,7 +373,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                 }
 
                 if (err == 0) {
-                    err = m_hwState->RelayControl(id, state);
+                    err = m_hwState->RelayControl(id, state, s->GetConnStr());
                 }
 
                 if (err == 0) {
@@ -412,7 +412,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                 }
 
                 if (mode != HWState::BadMode) {
-                    m_hwState->SetMode(mode);
+                    m_hwState->SetMode(mode, s->m_ConnId);
                     formatFullStatus(output, s);
                     res = MHD_HTTP_OK;
                 }
@@ -430,7 +430,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                     state = HWState::Heater;
                 }
                 if (state != HWState::Fault) {
-                    m_hwState->SetState(state);
+                    m_hwState->SetState(state, s->m_ConnId);
                     formatFullStatus(output, s);
                     res = MHD_HTTP_OK;
                 }
@@ -446,7 +446,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                     state = LeakSensor::Disabled;
                 }
                 if (state != LeakSensor::Fault) {
-                    m_hwState->SetLeakState(state);
+                    m_hwState->SetLeakState(state, s->GetConnStr());
                     formatFullStatus(output, s);
                     res = MHD_HTTP_OK;
                 }
@@ -460,7 +460,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                     state = HeaterController::Wash;
                 }
                 if (state != HeaterController::Fault) {
-                    m_hwState->SetHeaterState(state);
+                    m_hwState->SetHeaterState(state, s->GetConnStr());
                     formatFullStatus(output, s);
                     res = MHD_HTTP_OK;
                 }

@@ -11,6 +11,10 @@ public:
     Session(const char *user, const std::string &connId);
     virtual ~Session() {}
     void Refresh();
+	std::string GetConnStr()
+	{
+		return m_User + "@" + m_ConnId;
+	}
 
     unsigned long m_Id;
     time_t        m_UseTime;

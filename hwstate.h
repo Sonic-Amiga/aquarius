@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "hwconfig.h"
+#include "userdb.h"
 
 class LeakSensor
 {
@@ -112,14 +113,14 @@ public:
         return m_state;
     }
 
-    int       SetState(state_t state);
+    int       SetState(state_t state, const std::string &user);
     ctlmode_t GetMode() {return m_mode; }
-    void      SetMode(ctlmode_t mode);
+    void      SetMode(ctlmode_t mode, const std::string &user);
 
     LeakSensor::status_t GetLeakState() {return m_LeakSensor->GetState();}
-    int                  SetLeakState(LeakSensor::status_t);
+    int                  SetLeakState(LeakSensor::status_t, const std::string &user);
     int                  GetHeaterState() {return m_Heater->GetState();}
-    int                  SetHeaterState(int state);
+    int                  SetHeaterState(int state, const std::string &user);
 
     void HeaterWash(bool on);
     static bool IsFinalState(state_t);
@@ -129,8 +130,8 @@ public:
         return IsFinalState(m_state);
     }
 
-    int ValveControl(const char* id, int& state);
-    int RelayControl(const char* id, bool& state);
+    int ValveControl(const char* id, int& state, const std::string& user);
+    int RelayControl(const char* id, bool& state, const std::string& user);
 
 private:
     struct SavedState

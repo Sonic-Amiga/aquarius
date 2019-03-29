@@ -11,6 +11,7 @@
 
 #include "hwstate.h"
 #include "logging.h"
+#include "userdb.h"
 #include "utils.h"
 #include "wiringpi_hw.h"
 
@@ -497,15 +498,27 @@ bool HWState::IsFinalState(state_t state)
            (state == Heater) || (state == Maintenance);
 }
 
-int HWState::SetState(state_t state)
+int HWState::SetState(state_t state, const std::string &user)
 {
     int ret;
-    const char* reason;
+	const char *action;
+    const char *reason;
 
-    if (state != Closed && state != Central && state != Heater) {
-        // Errorneous input
-        return EINVAL;
-    }
+	switch (state)
+	{
+	case Closed:
+		action = "Manual close all";
+		break;
+	case Central:
+		action = "Manual switch to central";
+		break;
+	case Heater:
+		action = "Manual switch to heater";
+		break;
+	default:
+		// Errorneous input
+		return EINVAL;
+	}
 
     m_Lock.lock();
 
@@ -523,16 +536,23 @@ int HWState::SetState(state_t state)
 
     m_Lock.unlock();
 
-    if (ret == EPERM) {
-        Log(Log::ERR) << "Manual system control denied: " << reason;
+	switch (ret)
+	{
+	case 0:
+		Log(Log::INFO) << user << ' ' << action;
+		break;
+
+	case EPERM:
+        Log(Log::ERR) << user << " Manual system control denied: " << reason;
+		break;
     }
 
     return ret;
 }
 
-void HWState::SetMode(ctlmode_t mode)
+void HWState::SetMode(ctlmode_t mode, const std::string &user)
 {
-    Log(Log::INFO) << "Requested control mode: " << modeStrings[mode];
+    Log(Log::INFO) << user << " Requested control mode: " << modeStrings[mode];
 
     m_Lock.lock();
 
@@ -542,7 +562,7 @@ void HWState::SetMode(ctlmode_t mode)
     m_Lock.unlock();
 }
 
-int HWState::SetLeakState(LeakSensor::status_t state)
+int HWState::SetLeakState(LeakSensor::status_t state, const std::string &user)
 {
     if (state != LeakSensor::Enabled && state != LeakSensor::Disabled)
         return EINVAL;
@@ -551,49 +571,52 @@ int HWState::SetLeakState(LeakSensor::status_t state)
     m_LeakSensor->SetState(state);
     m_Lock.unlock();
 
-    Log(Log::INFO) << "Leak sensor " << (state == LeakSensor::Enabled ?
-                                         "enabled" : "disabled");
+    Log(Log::INFO) << user << " Leak sensor "
+		           << (state == LeakSensor::Enabled ? "enabled" : "disabled");
 
     return 0;
 }
 
-int HWState::SetHeaterState(int state)
+int HWState::SetHeaterState(int state, const std::string &user)
 {
     int ret;
-    const char* reason;
 
     if (state != HeaterController::Wash)
         return EINVAL;
-
-    Log(Log::INFO) << "Manual heater wash request";
 
     m_Lock.lock();
 
     if (m_LeakSensor->GetState() == LeakSensor::Alarm) {
         ret = EPERM;
-        reason = "leak detected";
     } else {
         m_Heater->SetState(state);
         ret = 0;
     }
 
     m_Lock.unlock();
+ 
+	switch (ret)
+	{
+	case 0:
+		Log(Log::INFO) << user << " Manual heater wash request";
+		break;
 
-    if (ret == EPERM) {
-        Log(Log::ERR) << "Manual heater control denied: " << reason;
+	case EPERM:
+        Log(Log::ERR) << user << " Manual heater control denied: leak detected";
+		break;
     }
 
 	return ret;
 }
 
-int HWState::ValveControl(const char* id, int& state)
+int HWState::ValveControl(const char* id, int& state, const std::string& user)
 {
     Valve* hw = m_Cfg->GetHardware<Valve>(id);
     int reqState = state;
     int ret;
 
     if (!hw) {
-        Log(Log::ERR) << "Valve " << id << " not found";
+        Log(Log::ERR) << user << " Valve " << id << " not found";
         return ENOENT;
     }
 
@@ -614,25 +637,26 @@ int HWState::ValveControl(const char* id, int& state)
 
     switch (ret) {
     case 0:
-        Log(Log::INFO) << hw->m_description << " manual " << Valve::statusStrings[reqState];
+        Log(Log::INFO) << user << ' ' << hw->m_description << " manual "
+			           << Valve::statusStrings[reqState];
         break;
     case EPERM:
-        Log(Log::ERR) << hw->m_description << " manual " << Valve::statusStrings[reqState]
-                        << " denied: not in maintenance mode";
+        Log(Log::ERR) << user << ' ' << hw->m_description << " manual "
+			          << Valve::statusStrings[reqState] << " denied: not in maintenance mode";
         break;
     }
 
     return ret;
 }
 
-int HWState::RelayControl(const char* id, bool &state)
+int HWState::RelayControl(const char* id, bool &state, const std::string& user)
 {
     Relay* hw = m_Cfg->GetHardware<Relay>(id);
     bool reqState = state;
     int ret;
 
     if (!hw) {
-        Log(Log::ERR) << "Relay " << id << " not found";
+        Log(Log::ERR) << user << " Relay " << id << " not found";
         return ENOENT;
     }
 
@@ -651,11 +675,12 @@ int HWState::RelayControl(const char* id, bool &state)
 
     switch (ret) {
     case 0:
-        Log(Log::INFO) << hw->m_description << " manual " << Relay::statusStrings[reqState];
+        Log(Log::INFO) << user << ' ' << hw->m_description << " manual "
+			           << Relay::statusStrings[reqState];
         break;
     case EPERM:
-        Log(Log::ERR) << hw->m_description << " manual " << Relay::statusStrings[reqState]
-                       << " denied: not in maintenance mode";
+        Log(Log::ERR) << user << ' ' << hw->m_description << " manual "
+			          << Relay::statusStrings[reqState] << " denied: not in maintenance mode";
         break;
     }
 
