@@ -16,7 +16,8 @@ public:
 
 private:
     int handleRequest(struct MHD_Connection *connection, const char *url);
-    HTTPSession *findSession(struct MHD_Connection *connection);
+    HTTPSession *findSession(struct MHD_Connection *connection, unsigned int permission = User::GUEST);
+	unsigned int GetControlUserLevel();
 
     static int urlHandler(void *cls, struct MHD_Connection *connection, const char *url,
                           const char *method, const char *version,

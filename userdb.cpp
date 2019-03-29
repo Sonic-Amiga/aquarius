@@ -14,17 +14,6 @@ static std::mutex g_Lock;
 
 static const unsigned int ExpireTime = 30;
 
-class User
-{
-public:
-    User(const std::string &passwd, unsigned int access)
-        : m_Passwd(passwd), m_Access(access)
-    {}
-
-    std::string m_Passwd;
-    unsigned int m_Access;
-};
-
 static std::map<std::string, User> g_UserDB;
 
 static std::string getWord(const std::string& str, int& pos)

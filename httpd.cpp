@@ -105,7 +105,8 @@ FileReader::~FileReader()
 class HTTPSession : public Session, public LogListener
 {
 public:
-    HTTPSession(const char* user, const std::string& connId) : Session(user, connId)
+    HTTPSession(const char* user, const std::string& connId, unsigned int access)
+		: Session(user, connId), m_Access(access)
     {
 		AddLogListener(this);
 	}
@@ -124,6 +125,8 @@ public:
 
         return lines;
     }
+
+	unsigned int m_Access;
 
 private:
     virtual void Write(const std::string& line) override
@@ -280,7 +283,7 @@ static std::string getConnId(struct MHD_Connection *conn)
     return std::string(buf) + "/http";
 }
 
-HTTPSession* HTTPServer::findSession(struct MHD_Connection *connection)
+HTTPSession* HTTPServer::findSession(struct MHD_Connection *connection, unsigned int permission)
 {
     const char* sidStr = MHD_lookup_connection_value(connection, MHD_GET_ARGUMENT_KIND, "session");
 
@@ -288,11 +291,20 @@ HTTPSession* HTTPServer::findSession(struct MHD_Connection *connection)
         long sid = strtoul(sidStr, nullptr, 10);
         HTTPSession *s = dynamic_cast<HTTPSession *>(GetSession(sid));
 
-        if (s && (s->m_ConnId == getConnId(connection)))
+        if (s && (s->m_ConnId == getConnId(connection))
+			  && (s->m_Access >= permission))
+		{
             return s;
+	    }
     }
 
     return nullptr;
+}
+
+unsigned int HTTPServer::GetControlUserLevel()
+{
+	// If the system in maintenance mode, only technician can control
+	return m_hwState->GetMode() == HWState::FullManual ? User::TECHNICIAN : User::NORMAL;
 }
 
 int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url)
@@ -313,8 +325,8 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
         if (user && passwd) {
             unsigned int permissions = Authenticate(user, passwd);
 
-            if (permissions) {
-                s = new HTTPSession(user, getConnId(connection));
+            if (permissions > User::NOACCESS) {
+                s = new HTTPSession(user, getConnId(connection), permissions);
                 RegisterSession(s);
             }
         }
@@ -334,7 +346,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
 
         redirect = "/index.html";
     } else if (!strcmp(url, "/valve")) {
-        s = findSession(connection);
+        s = findSession(connection, User::TECHNICIAN);
         if (s) {
             const char *id = MHD_lookup_connection_value(connection, MHD_GET_ARGUMENT_KIND, "id");
             const char *action = MHD_lookup_connection_value(connection, MHD_GET_ARGUMENT_KIND, "action");
@@ -362,7 +374,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
             res = MHD_HTTP_UNAUTHORIZED;
         }
     } else if (!strcmp(url, "/relay")) {
-        s = findSession(connection);
+        s = findSession(connection, User::TECHNICIAN);
         if (s) {
             const char *id = MHD_lookup_connection_value(connection, MHD_GET_ARGUMENT_KIND, "id");
             const char *action = MHD_lookup_connection_value(connection, MHD_GET_ARGUMENT_KIND, "action");
@@ -403,7 +415,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
             res = MHD_HTTP_UNAUTHORIZED;
         }
     } else if (!strcmp(url, "/control")) {
-        s = findSession(connection);
+        s = findSession(connection, GetControlUserLevel());
         if (s) {
             if (const char *modeStr = MHD_lookup_connection_value(connection,
                                                                   MHD_GET_ARGUMENT_KIND, "mode"))
@@ -415,7 +427,11 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                 } else if (!strcmp(modeStr, "manual")) {
                     mode = HWState::Manual;
                 } else if (!strcmp(modeStr, "maintenance")) {
-                    mode = HWState::FullManual;
+					// Only technician can switch to maintenance mode
+					if (s->m_Access >= User::TECHNICIAN)
+						mode = HWState::FullManual;
+					else
+						res = MHD_HTTP_UNAUTHORIZED;
                 }
 
                 if (mode != HWState::BadMode) {

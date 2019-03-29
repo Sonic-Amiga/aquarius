@@ -5,6 +5,25 @@
 #include <ostream>
 #include <string>
 
+class User
+{
+public:
+	enum
+	{
+		NOACCESS,
+		GUEST,
+		NORMAL,
+		TECHNICIAN
+	};
+
+	User(const std::string &passwd, unsigned int access)
+		: m_Passwd(passwd), m_Access(access)
+	{}
+
+	std::string m_Passwd;
+	unsigned int m_Access;
+};
+
 class Session
 {
 public:

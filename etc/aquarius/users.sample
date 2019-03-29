@@ -1,3 +1,8 @@
 # Username passwd access
+# Access levels:
+# 0 - disabled
+# 1 - guest; can only watch
+# 2 - regular user; can switch between manual and auto modes
+# 3 - technician; can switch to maintenance mode and use direct controls
 admin	admin	3
 guest	guest	1
