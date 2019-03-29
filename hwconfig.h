@@ -133,12 +133,6 @@ private:
     std::map<std::string, Hardware*> m_hw;
     std::vector<Switch*> m_LeakDetectors;
     std::vector<Hardware *>m_AnonHW;
-
-    Valve       *m_CS;
-    Valve       *m_HS;
-    Valve       *m_HI;
-    Valve       *m_HO;
-    Thermometer *m_HST;
 };
 
 class DeviceType

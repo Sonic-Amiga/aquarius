@@ -215,6 +215,11 @@ void HWConfig::createLeakDetector(xmlNode *heaterNode)
 
 void HWConfig::createValveController(xmlNode *vcNode)
 {
+    Valve *CS = nullptr;
+    Valve *HS = nullptr;
+    Valve *HI = nullptr;
+    Valve *HO = nullptr;
+    Thermometer *HST = nullptr;
     xmlNode *node;
 
     for (node = vcNode->children; node; node = node->next) {
@@ -222,20 +227,20 @@ void HWConfig::createValveController(xmlNode *vcNode)
             const char *name = (const char *)node->name;
 
             if (!strcmp(name, "cold_supply")) {
-               m_CS = createValve(node);
-               AddHardware(m_CS);
+                CS = createValve(node);
+                AddHardware(CS);
             } else if (!strcmp(name, "hot_supply")) {
-                m_HS = createValve(node);
-               AddHardware(m_HS);
+                HS = createValve(node);
+               AddHardware(HS);
             } else if (!strcmp(name, "heater_in")) {
-                m_HI = createValve(node);
-               AddHardware(m_HI);
+                HI = createValve(node);
+               AddHardware(HI);
             } else if (!strcmp(name, "heater_out")) {
-                m_HO = createValve(node);
-               AddHardware(m_HO);
+                HO = createValve(node);
+               AddHardware(HO);
             } else if (!strcmp(name, "hot_supply_temp")) {
-                m_HST = createDeviceOfClass<Thermometer>(node);
-               AddHardware(m_HST);
+                HST = createDeviceOfClass<Thermometer>(node);
+               AddHardware(HST);
             } else {
                 Log(Log::ERR) << "Unknown valve controller component \""
                                 << name << '"' << *node;
@@ -243,6 +248,8 @@ void HWConfig::createValveController(xmlNode *vcNode)
             }
         }
     }
+
+    m_HWState = new HWState(this, CS, HS, HI, HO, HST);
 }
 
 Valve *HWConfig::createValve(xmlNode *vNode)
@@ -306,8 +313,7 @@ Valve *HWConfig::createValve(xmlNode *vNode)
 }
 
 HWConfig::HWConfig()
-    : m_HWState(nullptr),
-      m_CS(nullptr), m_HS(nullptr), m_HI(nullptr), m_HO(nullptr), m_HST(nullptr)
+    : m_HWState(nullptr)
 {
     LIBXML_TEST_VERSION
     xmlDoc *doc = xmlReadFile(configPath, NULL, 0);
@@ -331,15 +337,13 @@ HWConfig::HWConfig()
         readNodes(startNode, "bus", &HWConfig::createBus);
         readNodes(startNode, "heater_controller", &HWConfig::createHeater);
         readNodes(startNode, "leak_detector", &HWConfig::createLeakDetector);
+        // Valve controller interacts with all other components, so we create it
+        // after everything else
         readNodes(startNode, "valve_controller", &HWConfig::createValveController);
     }
 
     xmlFreeDoc(doc);
     xmlCleanupParser();
-
-    // HWState is our main state machine and it manages all other components,
-    // so we create it after everything else
-    m_HWState = new HWState(this, m_CS, m_HS, m_HI, m_HO, m_HST);
 }
 
 HWConfig::~HWConfig()
