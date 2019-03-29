@@ -8,8 +8,6 @@
 
 #include "hardware.h"
 
-class PCF857x;
-
 static inline const char *GetStrProp(xmlNode *node, const char *name)
 {
     return (const char *)xmlGetProp(node, (const xmlChar *)name);
@@ -111,7 +109,6 @@ private:
 
     Hardware *m_Parent;
 
-    PCF857x* m_ioExt1;
     std::map<std::string, Hardware*> m_hw;
     std::vector<Switch*> m_LeakDetectors;
     std::vector<Hardware *>m_AnonHW;

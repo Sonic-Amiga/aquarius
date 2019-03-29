@@ -4,10 +4,7 @@
 #include <string.h>
 
 #include "hwconfig.h"
-#include "fileio_hw.h"
 #include "logging.h"
-#include "i2c_hw.h"
-#include "wiringpi_hw.h"
 
 #ifdef _WIN32
 static const char *const configPath = "C:\\aquarius\\etc\\aquarius\\config.xml";

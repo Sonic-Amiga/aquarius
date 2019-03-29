@@ -58,11 +58,6 @@ void PCF857x::WriteBit(int bit, bool state)
     m_Port->Write(&buf, 2);
 }
 
-Switch* PCF857x::newSwitch(int bit, bool activeLow)
-{
-    return new PCFSwitch(this, bit, activeLow);
-}
-
 //*** XML deserializers begin here ***
 
 REGISTER_DEVICE_TYPE(PCF857x)(xmlNode *node, HWConfig *cfg)

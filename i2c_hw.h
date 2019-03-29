@@ -26,8 +26,6 @@ public:
     int ReadBit(int bit, bool activeLow);
     void WriteBit(int bit, bool state);
 
-    Switch* newSwitch(int bit, bool activeLow);
-
 private:
     I2CPort* m_Port;
     unsigned int m_DataSize;
