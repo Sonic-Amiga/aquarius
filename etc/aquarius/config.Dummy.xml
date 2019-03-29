@@ -6,19 +6,19 @@
 -->
 <config>
 <valve_controller>
-    <cold_supply id="CS" timeout="30">
+    <cold_supply id="CS" timeout="10">
         <close_relay type="DummyRelay"/>
         <open_relay type="DummyRelay"/>
     </cold_supply>
-    <hot_supply id="HS" timeout="30">
+    <hot_supply id="HS" timeout="10">
         <close_relay type="DummyRelay"/>
         <open_relay type="DummyRelay"/>
     </hot_supply>
-    <heater_in id="HI" timeout="30">
+    <heater_in id="HI" timeout="10">
         <close_relay type="DummyRelay"/>
         <open_relay type="DummyRelay"/>
     </heater_in>
-    <heater_out id="HO" timeout="30">
+    <heater_out id="HO" timeout="10">
         <close_relay type="DummyRelay"/>
         <open_relay type="DummyRelay"/>
     </heater_out>
@@ -27,7 +27,7 @@
 <heater_controller>
     <power_relay id="HR" type="DummyRelay"/>
     <drain_relay id="HD" type="DummyRelay"/>
-    <pressure_switch id="HP" type="DummySwitch"/>
+    <pressure_switch id="HP" type="DummySwitch" inverted="1"/>
     <temp_sensor id="HT" type="FileIOThermometer" path="C:\aquarius\fileio\heater_temp" threshold="45"/>
 </heater_controller>
 <leak_detector>

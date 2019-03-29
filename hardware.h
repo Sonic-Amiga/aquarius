@@ -116,6 +116,10 @@ public:
 private:
     void ReportFault(const char* s);
     void GetStateFromSwitches();
+	bool HaveSwitches()
+	{
+		return m_OpenSwitch && m_CloseSwitch;
+	}
 
     int    m_State;
     time_t m_StateChange;

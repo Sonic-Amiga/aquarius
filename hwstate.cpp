@@ -256,8 +256,12 @@ HWState::~HWState()
     delete m_Heater;
 }
 
+#ifdef _WIN32
+static const char *stateFile = "C:\\aquarius\\aquarius.state";
+#else
 // /var/run is tmpfs on OrangePI
 static const char *stateFile = "/var/aquarius.state";
+#endif
 
 bool HWState::LoadState()
 {

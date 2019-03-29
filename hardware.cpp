@@ -60,12 +60,15 @@ void Valve::ReportFault(const char* s)
     // Avoid flooding the log
     if (m_State != Fault) {
         m_State = Fault;
-        Log(Log::ERR) << "Valve " << m_name << ' ' << s;
+        Log(Log::ERR) << m_description << " valve " << s;
     }
 }
 
 void Valve::GetStateFromSwitches()
 {
+	if (!HaveSwitches())
+		return;
+
     int openSt  = m_OpenSwitch->GetState();
     int closeSt = m_CloseSwitch->GetState();
 
@@ -134,9 +137,18 @@ void Valve::Poll()
 
     if ((m_State == Opening) || (m_State == Closing)) {
         if (GetMonotonicTime() - m_StateChange > m_StateChangeTimeout) {
-            // Timeout exceeded, mechanical fault
-            Log(Log::ERR) << "Valve " << m_name << ' ' << statusStrings[m_State] << " timeout";
-            m_State = Fault;
+			if (HaveSwitches()) {
+				// Timeout exceeded, mechanical fault
+				Log(Log::ERR) << m_description << " valve "
+					          << statusStrings[m_State] << " timeout";
+				m_State = Fault;
+			} else if (m_State == Opening) {
+				// Poor man's motors without position sensors. We just want for
+				// enough time and assume they worked.
+				m_State = Open;
+			} else {
+				m_State = Closed;
+			}
         }
     }
 }

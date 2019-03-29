@@ -22,7 +22,11 @@
 
 // TODO: These have to go to some config file
 static const unsigned short port = 80;
+#ifdef _WIN32
+static const char* webRoot = "C:\\aquarius\\share\\aquarius\\web";
+#else
 static const char* webRoot = "/usr/local/share/aquarius/web";
+#endif
 
 class FileReader : public std::fstream
 {
