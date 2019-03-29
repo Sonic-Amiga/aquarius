@@ -90,7 +90,7 @@ REGISTER_DEVICE_TYPE(PCFSwitch)(xmlNode *node, HWConfig *cfg)
 {
     PCF857x *device = dynamic_cast<PCF857x *>(cfg->GetDeviceProp(node, "device"));
     int pin = GetIntProp(node, "pin");
-    int inverted = GetIntProp(node, "inverted");
+    int inverted = GetIntProp(node, "inverted", 0);
 
     if ((!device) || (pin == -1) || (inverted == -1)) {
         Log(Log::ERR) << "Malformed PCFSwitch definition";

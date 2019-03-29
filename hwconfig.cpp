@@ -9,7 +9,11 @@
 #include "i2c_hw.h"
 #include "wiringpi_hw.h"
 
+#ifdef _WIN32
+static const char *const configPath = "C:\\aquarius\\etc\\aquarius\\config.xml";
+#else
 static const char *const configPath = "/etc/aquarius/config.xml";
+#endif
 
 /*
  * DeviceType instances are static and their constructors are run during early
@@ -30,7 +34,7 @@ DeviceType::DeviceType(const char *type)
     g_DeviceTypes = this;
 }
 
-int GetIntProp(xmlNode *node, const char *name)
+int GetIntProp(xmlNode *node, const char *name, int defVal)
 {
     const char *str = GetStrProp(node, name);
 
@@ -38,11 +42,20 @@ int GetIntProp(xmlNode *node, const char *name)
         char *p;
         int ret = strtol(str, &p, 0);
 
-        if (*p == 0)
-            return ret;
-    }
-
-    return -1;
+		if (*p == 0) {
+			return ret;
+		} else {
+			Log(Log::ERR) << "Invalid value for \"" << name << "\" attribute at "
+				          << node->doc->name << " line " << node->line;
+			return -1;
+	    }
+    } else {
+		if (defVal == -1) {
+			Log(Log::ERR) << "Missing mandatory \"" << name << "\" attribute at "
+				<< node->doc->name << " line " << node->line;
+		}
+        return defVal;
+	}
 }
 
 float GetFloatProp(xmlNode *node, const char *name)

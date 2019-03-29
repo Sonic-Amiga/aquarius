@@ -1,0 +1,39 @@
+<!--
+    Simple dummy configuration for development and debugging
+    Simulates cheap valve motors without position sensors.
+    Thermometers are fully working, it is possible to send temperature
+    readings by writing values to their respective files
+-->
+<config>
+<valve_controller>
+    <cold_supply id="CS" timeout="30">
+        <close_relay type="DummyRelay"/>
+        <open_relay type="DummyRelay"/>
+    </cold_supply>
+    <hot_supply id="HS" timeout="30">
+        <close_relay type="DummyRelay"/>
+        <open_relay type="DummyRelay"/>
+    </hot_supply>
+    <heater_in id="HI" timeout="30">
+        <close_relay type="DummyRelay"/>
+        <open_relay type="DummyRelay"/>
+    </heater_in>
+    <heater_out id="HO" timeout="30">
+        <close_relay type="DummyRelay"/>
+        <open_relay type="DummyRelay"/>
+    </heater_out>
+    <hot_supply_temp id="HST" type="FileIOThermometer" path="C:\aquarius\fileio\hot_supply_temp" threshold="45"/>
+</valve_controller>
+<heater_controller>
+    <power_relay id="HR" type="DummyRelay"/>
+    <drain_relay id="HD" type="DummyRelay"/>
+    <pressure_switch id="HP" type="DummySwitch"/>
+    <temp_sensor id="HT" type="FileIOThermometer" path="C:\aquarius\fileio\heater_temp" threshold="45"/>
+</heater_controller>
+<leak_detector>
+    <switch id="LD0" type="DummySwitch" description="Plumbing cabinet"/>
+    <switch id="LD1" type="DummySwitch" description="Kitchen"/>
+    <switch id="LD2" type="DummySwitch" description="Bathroom 1"/>
+    <switch id="LD3" type="DummySwitch" description="Bathroom 2"/>
+</leak_detector>
+</config>

@@ -2,6 +2,7 @@
 #define HARDWARE_H
 
 #include <time.h>
+#include <string>
 
 class Hardware
 {
@@ -32,7 +33,7 @@ public:
     }
 
 protected:
-    virtual void ApplyState(bool on) {}
+	virtual void ApplyState(bool on) = 0;
 
 private:
     bool m_State;
@@ -52,10 +53,7 @@ public:
     Switch(bool inverted) : m_activeLow(inverted)
     {}
 
-    virtual int GetState()
-    {
-        return Off;
-    }
+	virtual int GetState() = 0;
 
 protected:
     bool m_activeLow;

@@ -5,6 +5,8 @@
 
 #ifdef _WIN32
 #include <io.h>
+#else
+#define O_BINARY 0
 #endif
 
 #include "hwstate.h"
@@ -260,7 +262,7 @@ static const char *stateFile = "/var/aquarius.state";
 bool HWState::LoadState()
 {
     struct SavedState st;
-    int fd = open(stateFile, O_RDONLY);
+    int fd = open(stateFile, O_RDONLY|O_BINARY);
 
     // The file must exist and be readable
     if (fd == -1) {
@@ -314,7 +316,7 @@ bool HWState::SaveState(state_t state, ctlmode_t mode)
     st.Mode  = mode;
     st.Check = st.CalcCheck();
 
-    int fd = open(stateFile, O_CREAT|O_TRUNC|O_WRONLY, 0600);
+    int fd = open(stateFile, O_CREAT|O_TRUNC|O_WRONLY|O_BINARY, 0600);
 
     if (fd == -1) {
         ok = false;

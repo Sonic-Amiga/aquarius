@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(Aquarius)
 
 set (SRCS main.cpp
+          dummy_hw.cpp
           fileio_hw.cpp
           httpd.cpp
           hwconfig.cpp

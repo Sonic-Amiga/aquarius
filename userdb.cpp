@@ -74,7 +74,11 @@ static int getInt(const std::string& str, int& pos)
 }
 
 // TODO: Shouldn't this be configurable ?
+#ifdef _WIN32
+static const char *const users_path = "C:\\aquarius\\etc\\aquarius\\users";
+#else
 static const char *const users_path = "/etc/aquarius/users";
+#endif // _WIN32
 
 void InitUserDB()
 {

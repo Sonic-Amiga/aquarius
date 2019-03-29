@@ -15,7 +15,7 @@ static inline const char *GetStrProp(xmlNode *node, const char *name)
     return (const char *)xmlGetProp(node, (const xmlChar *)name);
 }
 
-int GetIntProp(xmlNode *node, const char *name);
+int GetIntProp(xmlNode *node, const char *name, int defVal = -1);
 float GetFloatProp(xmlNode *node, const char *name);
 
 class HWConfig

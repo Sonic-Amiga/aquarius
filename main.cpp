@@ -13,10 +13,10 @@ void fatal(const char *fmt, ...)
     va_list ap;
 
     va_start(ap, fmt);
-    fprintf(stderr, fmt, ap);
+    vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
     va_end(ap);
-    abort();
+    exit(255);
 }
 
 class FileLog : public LogListener
@@ -39,9 +39,22 @@ void FileLog::Write(const std::string& line)
     f.close();
 }
 
+class ConsoleLog : public LogListener
+{
+private:
+	virtual void Write(const std::string& line) override
+	{
+		std::cout << line << std::endl;
+	}
+};
+
 int main(void)
 {
-    FileLog fileLog("/var/log/aquarius.log");
+#ifdef _WIN32
+	ConsoleLog conLog;
+#else
+	FileLog fileLog("/var/log/aquarius.log");
+#endif
     InitUserDB();
 
     HWConfig* theConfig = new HWConfig();
