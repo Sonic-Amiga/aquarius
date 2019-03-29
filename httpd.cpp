@@ -435,7 +435,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                 }
 
                 if (mode != HWState::BadMode) {
-                    m_hwState->SetMode(mode, s->m_ConnId);
+                    m_hwState->SetMode(mode, s->GetConnStr());
                     formatFullStatus(output, s);
                     res = MHD_HTTP_OK;
                 }
@@ -453,7 +453,7 @@ int HTTPServer::handleRequest(struct MHD_Connection *connection, const char* url
                     state = HWState::Heater;
                 }
                 if (state != HWState::Fault) {
-                    m_hwState->SetState(state, s->m_ConnId);
+                    m_hwState->SetState(state, s->GetConnStr());
                     formatFullStatus(output, s);
                     res = MHD_HTTP_OK;
                 }

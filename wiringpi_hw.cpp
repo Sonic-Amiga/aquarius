@@ -38,7 +38,7 @@ WPII2CPort::WPII2CPort(int addr)
     m_fd = wiringPiI2CSetup(addr);
 
     if (m_fd == -1) {
-        Log(Log::ERROR) << "Failed to connect to i2c address " << std::hex << addr;
+        Log(Log::ERR) << "Failed to connect to i2c address " << std::hex << addr;
     }
 }
 
@@ -75,7 +75,7 @@ REGISTER_DEVICE_TYPE(WPIRelay)(xmlNode *node, HWConfig *)
     int inactive = GetIntProp(node, "inactive");
 
     if ((pin == -1) || (inactive == -1)) {
-        Log(Log::ERROR) << "Malformed WPIRelay description";
+        Log(Log::ERR) << "Malformed WPIRelay description";
         return nullptr;
     } else {
         return new WPIRelay(pin, inactive);
