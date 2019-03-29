@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "logging.h"
+#include "utils.h"
 
 static std::vector<LogListener *> g_Listeners;
 static std::mutex g_Lock;

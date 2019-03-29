@@ -1,5 +1,4 @@
-#include <pthread.h>
-
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -164,5 +163,5 @@ private:
     unsigned int      m_step;      // State transition step
     ctlmode_t         m_mode;
 
-    pthread_mutex_t m_Lock;
+    std::mutex        m_Lock;
 };

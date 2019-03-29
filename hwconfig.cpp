@@ -98,7 +98,7 @@ Hardware *HWConfig::createDevice(xmlNode *node)
     DeviceType *dt;
 
     if (!type) {
-        Log(Log::ERROR) << "Malformed configuration element " << node->name;
+        Log(Log::ERR) << "Malformed configuration element " << node->name;
         return nullptr;
     }
 
@@ -108,7 +108,7 @@ Hardware *HWConfig::createDevice(xmlNode *node)
     }
 
     if (!dt) {
-        Log(Log::ERROR) << "Unknown device type " << type;
+        Log(Log::ERR) << "Unknown device type " << type;
         return nullptr;
     }
 
@@ -161,7 +161,7 @@ void HWConfig::createHeater(xmlNode *heaterNode)
             } else if (!strcmp(name, "temp_sensor")) {
                dev = createDevice(node);
             } else {
-                Log(Log::ERROR) << "Unknown heater controller component \"" << name << '"';
+                Log(Log::ERR) << "Unknown heater controller component \"" << name << '"';
                 continue;
             }
 
@@ -184,7 +184,7 @@ void HWConfig::createLeakDetector(xmlNode *heaterNode)
             if (!strcmp(name, "switch")) {
                 dev = createDevice(node);
             } else {
-                Log(Log::ERROR) << "Unknown leak detector component \"" << name << '"';
+                Log(Log::ERR) << "Unknown leak detector component \"" << name << '"';
                 continue;
             }
 
@@ -192,7 +192,7 @@ void HWConfig::createLeakDetector(xmlNode *heaterNode)
             if (sw) {
                 AddLeakSensor(sw);
             } else {
-                Log(Log::ERROR) << "Only switches are currently supported as leak sensor inputs";
+                Log(Log::ERR) << "Only switches are currently supported as leak sensor inputs";
             }
         }
     }
@@ -218,7 +218,7 @@ void HWConfig::createValveController(xmlNode *vcNode)
             } else if (!strcmp(name, "hot_supply_temp")) {
                dev = createDevice(node);
             } else {
-                Log(Log::ERROR) << "Unknown valve controller component \""
+                Log(Log::ERR) << "Unknown valve controller component \""
                                 << name << '"';
                 continue;
             }
@@ -240,7 +240,7 @@ Valve *HWConfig::createValve(xmlNode *vNode)
     xmlNode *node;
 
     if (timeout == -1) {
-        Log(Log::ERROR) << "Invalid valve timeout value in the config";
+        Log(Log::ERR) << "Invalid valve timeout value in the config";
         return nullptr;
     }
 
@@ -257,7 +257,7 @@ Valve *HWConfig::createValve(xmlNode *vNode)
             } else if (!strcmp(name, "open_switch")) {
                 openSwitch = dynamic_cast<Switch *>(createDevice(node));
             } else {
-                Log(Log::ERROR) << "Unknown valve component " << name;
+                Log(Log::ERR) << "Unknown valve component " << name;
             }
 
             // Note no AddHardware() here. Valve owns its components.
@@ -271,7 +271,7 @@ Valve *HWConfig::createValve(xmlNode *vNode)
         setId(v, vNode);
         return v;
     } else {
-        Log(Log::ERROR) << "Valve relay definition is invalid or missing";
+        Log(Log::ERR) << "Valve relay definition is invalid or missing";
 
         if (closeRelay) {
             delete closeRelay;
@@ -323,8 +323,6 @@ HWConfig::HWConfig()
 
 HWConfig::~HWConfig()
 {
-    unsigned int i;
-
     for (auto& hw : m_hw)
         delete hw.second;
 

@@ -2,7 +2,10 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+#include <io.h>
+#endif
 
 #include "hwstate.h"
 #include "logging.h"
@@ -14,7 +17,7 @@ LeakSensor::LeakSensor(HWConfig* cfg) : m_state(Enabled)
     m_Sensors = cfg->GetLeakDetectors();
     m_SensorState = new int[m_Sensors.size()];
 
-    for (int i = 0; i < m_Sensors.size(); i++)
+    for (size_t i = 0; i < m_Sensors.size(); i++)
         m_SensorState[i] = Switch::Off;
 }
 
@@ -22,7 +25,7 @@ bool LeakSensor::Poll()
 {
     bool alarm = false;
 
-    for (int i = 0; i < m_Sensors.size(); i++) {
+    for (size_t i = 0; i < m_Sensors.size(); i++) {
         Switch* s = m_Sensors[i];
         int ss = s->GetState();
 
@@ -43,7 +46,7 @@ bool LeakSensor::Poll()
             break;
 
         case Switch::Fault:
-            Log(Log::ERROR) << "Leak sensor fault in " << s->m_description;
+            Log(Log::ERR) << "Leak sensor fault in " << s->m_description;
             break;
         }
     }
@@ -123,7 +126,7 @@ void HeaterController::Poll(int s_HI)
 
     if (s_HP == Switch::Fault) {
         if (m_State != Fault) {
-            Log(Log::ERROR) << "Heater pressure monitor fault";
+            Log(Log::ERR) << "Heater pressure monitor fault";
             ApplyState(Fault);
         }
     }
@@ -226,8 +229,6 @@ static const char *stateStrings[] =
 HWState::HWState(HWConfig* cfg)
     : m_Cfg(cfg), m_state(Maintenance), m_mode(Manual)
 {
-    pthread_mutex_init(&m_Lock, NULL);
-
     m_CS = cfg->GetHardware<Valve>("CS"); // Cold Supply
     m_HS = cfg->GetHardware<Valve>("HS"); // Hot Supply
     m_HI = cfg->GetHardware<Valve>("HI"); // Heater in
@@ -243,7 +244,7 @@ HWState::HWState(HWConfig* cfg)
     m_Heater     = new HeaterController(this, cfg);
 
     if (!LoadState()) {
-        Log(Log::ERROR) << "Could not read saved status; fall back to default!";
+        Log(Log::ERR) << "Could not read saved status; fall back to default!";
     }
 }
 
@@ -251,8 +252,6 @@ HWState::~HWState()
 {
     delete m_LeakSensor;
     delete m_Heater;
-
-    pthread_mutex_destroy(&m_Lock);
 }
 
 // /var/run is tmpfs on OrangePI
@@ -295,7 +294,7 @@ bool HWState::LoadState()
         // I/O hardware switches all of them off. Wait 0.5 sec before
         // turning back on some of them; quickly pulsing them isn't good for
         // electronics
-        usleep(500000);
+        msleep(500);
         // In auto mode we'll deduce the state to set, and 
         // in Maintenance mode we only do what operator is telling
         Log(Log::INFO) << "Bringing back manual control state: "
@@ -334,7 +333,7 @@ bool HWState::SaveState(state_t state, ctlmode_t mode)
     }
 
     if (!ok) {
-        Log(Log::ERROR) << "Unable to save status file";
+        Log(Log::ERR) << "Unable to save status file";
     }
 
     return ok;
@@ -342,7 +341,7 @@ bool HWState::SaveState(state_t state, ctlmode_t mode)
 
 void HWState::Poll()
 {
-    pthread_mutex_lock(&m_Lock);
+    m_Lock.lock();
 
     if (m_LeakSensor->Poll()) {
         ApplyState(Closed);
@@ -436,7 +435,7 @@ void HWState::Poll()
         m_Heater->Poll(heaterInState);
     }
 
-    pthread_mutex_unlock(&m_Lock);
+    m_Lock.unlock();
 }
 
 void HWState::ApplyState(state_t state)
@@ -502,7 +501,7 @@ int HWState::SetState(state_t state)
         return EINVAL;
     }
 
-    pthread_mutex_lock(&m_Lock);
+    m_Lock.lock();
 
     if (m_LeakSensor->GetState() == LeakSensor::Alarm) {
         ret = EPERM;
@@ -516,10 +515,10 @@ int HWState::SetState(state_t state)
         reason = "not in manual mode";
     }
 
-    pthread_mutex_unlock(&m_Lock);
+    m_Lock.unlock();
 
     if (ret == EPERM) {
-        Log(Log::ERROR) << "Manual system control denied: " << reason;
+        Log(Log::ERR) << "Manual system control denied: " << reason;
     }
 
     return ret;
@@ -529,12 +528,12 @@ void HWState::SetMode(ctlmode_t mode)
 {
     Log(Log::INFO) << "Requested control mode: " << modeStrings[mode];
 
-    pthread_mutex_lock(&m_Lock);
+    m_Lock.lock();
 
     SaveState(m_state, mode);
     m_mode = mode;
 
-    pthread_mutex_unlock(&m_Lock);
+    m_Lock.unlock();
 }
 
 int HWState::SetLeakState(LeakSensor::status_t state)
@@ -542,9 +541,9 @@ int HWState::SetLeakState(LeakSensor::status_t state)
     if (state != LeakSensor::Enabled && state != LeakSensor::Disabled)
         return EINVAL;
 
-    pthread_mutex_lock(&m_Lock);
+    m_Lock.lock();
     m_LeakSensor->SetState(state);
-    pthread_mutex_unlock(&m_Lock);
+    m_Lock.unlock();
 
     Log(Log::INFO) << "Leak sensor " << (state == LeakSensor::Enabled ?
                                          "enabled" : "disabled");
@@ -562,7 +561,7 @@ int HWState::SetHeaterState(int state)
 
     Log(Log::INFO) << "Manual heater wash request";
 
-    pthread_mutex_lock(&m_Lock);
+    m_Lock.lock();
 
     if (m_LeakSensor->GetState() == LeakSensor::Alarm) {
         ret = EPERM;
@@ -572,11 +571,13 @@ int HWState::SetHeaterState(int state)
         ret = 0;
     }
 
-    pthread_mutex_unlock(&m_Lock);
+    m_Lock.unlock();
 
     if (ret == EPERM) {
-        Log(Log::ERROR) << "Manual heater control denied: " << reason;
+        Log(Log::ERR) << "Manual heater control denied: " << reason;
     }
+
+	return ret;
 }
 
 int HWState::ValveControl(const char* id, int& state)
@@ -586,11 +587,11 @@ int HWState::ValveControl(const char* id, int& state)
     int ret;
 
     if (!hw) {
-        Log(Log::ERROR) << "Valve " << id << " not found";
+        Log(Log::ERR) << "Valve " << id << " not found";
         return ENOENT;
     }
 
-    pthread_mutex_lock(&m_Lock);
+    m_Lock.lock();
 
     if (m_mode != FullManual) {
         ret = EPERM;
@@ -603,14 +604,14 @@ int HWState::ValveControl(const char* id, int& state)
         ret = EINVAL;
     }
 
-    pthread_mutex_unlock(&m_Lock);
+    m_Lock.unlock();
 
     switch (ret) {
     case 0:
         Log(Log::INFO) << hw->m_description << " manual " << Valve::statusStrings[reqState];
         break;
     case EPERM:
-        Log(Log::ERROR) << hw->m_description << " manual " << Valve::statusStrings[reqState]
+        Log(Log::ERR) << hw->m_description << " manual " << Valve::statusStrings[reqState]
                         << " denied: not in maintenance mode";
         break;
     }
@@ -625,11 +626,11 @@ int HWState::RelayControl(const char* id, bool &state)
     int ret;
 
     if (!hw) {
-        Log(Log::ERROR) << "Relay " << id << " not found";
+        Log(Log::ERR) << "Relay " << id << " not found";
         return ENOENT;
     }
 
-    pthread_mutex_lock(&m_Lock);
+    m_Lock.lock();
 
     if (m_mode != FullManual) {
         ret = EPERM;
@@ -640,14 +641,14 @@ int HWState::RelayControl(const char* id, bool &state)
         ret = 0;
     }
 
-    pthread_mutex_unlock(&m_Lock);
+    m_Lock.unlock();
 
     switch (ret) {
     case 0:
         Log(Log::INFO) << hw->m_description << " manual " << Relay::statusStrings[reqState];
         break;
     case EPERM:
-        Log(Log::ERROR) << hw->m_description << " manual " << Relay::statusStrings[reqState]
+        Log(Log::ERR) << hw->m_description << " manual " << Relay::statusStrings[reqState]
                        << " denied: not in maintenance mode";
         break;
     }

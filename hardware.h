@@ -1,7 +1,6 @@
 #ifndef HARDWARE_H
 #define HARDWARE_H
 
-#include <pthread.h>
 #include <time.h>
 
 class Hardware

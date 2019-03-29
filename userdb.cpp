@@ -101,7 +101,7 @@ void InitUserDB()
         access = getInt(line, pos);
 
         if (access < 0) {
-            Log(Log::ERROR) << "Malformed user record: " << line;
+            Log(Log::ERR) << "Malformed user record: " << line;
             continue;
         }
 
@@ -133,7 +133,7 @@ unsigned int Authenticate(const char *user, const char *passwd)
     auto it = g_UserDB.find(user);
 
     if (it == g_UserDB.end() || it->second.m_Passwd != passwd) {
-        Log(Log::ERROR) << "User " << user << " failed to authenticate";
+        Log(Log::ERR) << "User " << user << " failed to authenticate";
         return 0;
     } else {
         return it->second.m_Access;

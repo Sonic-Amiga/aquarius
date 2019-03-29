@@ -10,7 +10,7 @@ class Log
 public:
     typedef enum
     {
-        ERROR,
+        ERR,
         WARN,
         INFO,
         DEBUG

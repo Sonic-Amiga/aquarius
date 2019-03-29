@@ -60,7 +60,7 @@ void Valve::ReportFault(const char* s)
     // Avoid flooding the log
     if (m_State != Fault) {
         m_State = Fault;
-        Log(Log::ERROR) << "Valve " << m_name << ' ' << s;
+        Log(Log::ERR) << "Valve " << m_name << ' ' << s;
     }
 }
 
@@ -135,7 +135,7 @@ void Valve::Poll()
     if ((m_State == Opening) || (m_State == Closing)) {
         if (GetMonotonicTime() - m_StateChange > m_StateChangeTimeout) {
             // Timeout exceeded, mechanical fault
-            Log(Log::ERROR) << "Valve " << m_name << ' ' << statusStrings[m_State] << " timeout";
+            Log(Log::ERR) << "Valve " << m_name << ' ' << statusStrings[m_State] << " timeout";
             m_State = Fault;
         }
     }

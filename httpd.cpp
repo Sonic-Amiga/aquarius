@@ -1,9 +1,14 @@
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <fcntl.h>
 #include <math.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <WinSock2.h>
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <unistd.h>
+#endif
 
 #include <fstream>
 #include <iostream>
@@ -30,7 +35,7 @@ public:
 private:
     std::fstream f;
     std::string buf;
-    int pos;
+    size_t pos;
 
     std::vector<std::pair<std::string, std::string>> keyValues;
 };
@@ -170,10 +175,8 @@ void HTTPServer::Run()
 template<class T>
 static void formatStatus(std::ostream& output, const std::vector<T*> hw)
 {
-    int i;
-
     output << '{';
-    for (i = 0; i < hw.size(); i++) {
+    for (size_t i = 0; i < hw.size(); i++) {
         output << '"' << hw[i]->m_name << "\":" << hw[i]->GetState();
         if (i < hw.size() - 1) {
             output << ',';
@@ -185,10 +188,8 @@ static void formatStatus(std::ostream& output, const std::vector<T*> hw)
 template<class T>
 void formatValue(std::ostream& output, const std::vector<T*> hw)
 {
-    int i;
-
     output << '{';
-    for (i = 0; i < hw.size(); i++) {
+    for (size_t i = 0; i < hw.size(); i++) {
         float temp = hw[i]->GetValue();
         int state = hw[i]->GetState();
 

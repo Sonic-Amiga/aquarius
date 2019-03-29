@@ -6,6 +6,7 @@
 #include "httpd.h"
 #include "logging.h"
 #include "userdb.h"
+#include "utils.h"
 
 void fatal(const char *fmt, ...)
 {

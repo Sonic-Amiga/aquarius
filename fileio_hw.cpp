@@ -28,7 +28,7 @@ REGISTER_DEVICE_TYPE(FileIOThermometer)(xmlNode *node, HWConfig *)
     float threshold = GetFloatProp(node, "threshold");
 
     if ((!path) || isnan(threshold)) {
-        Log(Log::ERROR) << "Malformed FileIOThermometer description";
+        Log(Log::ERR) << "Malformed FileIOThermometer description";
         return nullptr;
     }
 

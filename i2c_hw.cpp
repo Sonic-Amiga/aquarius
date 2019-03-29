@@ -1,15 +1,14 @@
-#include <endian.h>
-
 #include "hwconfig.h"
 #include "i2c_hw.h"
 #include "logging.h"
+#include "utils.h"
 
 I2CPort* I2CBus::CreatePort(xmlNode *node)
 {
     int addr = GetIntProp(node, "address");
 
     if (addr == -1) {
-        Log(Log::ERROR) << "Malformed I2C address in config";
+        Log(Log::ERR) << "Malformed I2C address in config";
         return nullptr;
     } else {
         return CreatePort(addr);
@@ -71,7 +70,7 @@ REGISTER_DEVICE_TYPE(PCF857x)(xmlNode *node, HWConfig *cfg)
     I2CBus *bus = dynamic_cast<I2CBus *>(cfg->GetParentHW());
 
     if (!bus) {
-        Log(Log::ERROR) << "Incorrect bus type for PCF857x config";
+        Log(Log::ERR) << "Incorrect bus type for PCF857x config";
         return nullptr;
     }
 
@@ -79,7 +78,7 @@ REGISTER_DEVICE_TYPE(PCF857x)(xmlNode *node, HWConfig *cfg)
     int pincnt = GetIntProp(node, "pincount");
 
     if (pincnt == -1) {
-        Log(Log::ERROR) << "Malformed PCF857x definition in config";
+        Log(Log::ERR) << "Malformed PCF857x definition in config";
         delete port;
         return nullptr;
     }
@@ -94,7 +93,7 @@ REGISTER_DEVICE_TYPE(PCFSwitch)(xmlNode *node, HWConfig *cfg)
     int inverted = GetIntProp(node, "inverted");
 
     if ((!device) || (pin == -1) || (inverted == -1)) {
-        Log(Log::ERROR) << "Malformed PCFSwitch definition";
+        Log(Log::ERR) << "Malformed PCFSwitch definition";
         return nullptr;
     } else {
         return new PCFSwitch(device, pin, inverted);
