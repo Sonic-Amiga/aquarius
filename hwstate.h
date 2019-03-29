@@ -103,7 +103,7 @@ public:
         FullManual // Maintenance
     } ctlmode_t;
 
-    HWState(HWConfig* cfg);
+    HWState(HWConfig* cfg, Valve *CS, Valve *HS, Valve *HI, Valve *HO, Thermometer *HST);
     ~HWState();
 
     void Poll();

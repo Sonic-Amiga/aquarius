@@ -7,6 +7,9 @@
 #include <vector>
 
 #include "hardware.h"
+#include "logging.h"
+
+class HWState;
 
 static inline const char *GetStrProp(xmlNode *node, const char *name)
 {
@@ -15,6 +18,8 @@ static inline const char *GetStrProp(xmlNode *node, const char *name)
 
 int GetIntProp(xmlNode *node, const char *name, int defVal = -1);
 float GetFloatProp(xmlNode *node, const char *name);
+
+std::ostream &operator<<(std::ostream& os, const xmlNode &node);
 
 class HWConfig
 {
@@ -70,6 +75,8 @@ public:
         return m_LeakDetectors;
     }
 
+    HWState *m_HWState;
+
 private:
     void AddHardware(const char* name, Hardware* hw, const char* description)
     {
@@ -107,11 +114,31 @@ private:
     void createValveController(xmlNode *node);
     Valve *createValve(xmlNode *node);
 
+    template <class T>
+    T *createDeviceOfClass(xmlNode *node)
+    {
+        Hardware *hw = createDevice(node);
+        T *ret = dynamic_cast<T *>(hw);
+
+        if (!ret) {
+            Log(Log::ERR) << "Device " << node->name << " has wrong type " << *node;
+            delete hw;
+        }
+
+        return ret;
+    }
+
     Hardware *m_Parent;
 
     std::map<std::string, Hardware*> m_hw;
     std::vector<Switch*> m_LeakDetectors;
     std::vector<Hardware *>m_AnonHW;
+
+    Valve       *m_CS;
+    Valve       *m_HS;
+    Valve       *m_HI;
+    Valve       *m_HO;
+    Thermometer *m_HST;
 };
 
 class DeviceType

@@ -229,14 +229,10 @@ static const char *stateStrings[] =
     "Maintenance"
 };
 
-HWState::HWState(HWConfig* cfg)
-    : m_Cfg(cfg), m_state(Maintenance), m_mode(Manual)
+HWState::HWState(HWConfig* cfg, Valve *CS, Valve *HS, Valve *HI, Valve *HO, Thermometer *HST)
+    : m_Cfg(cfg), m_CS(CS), m_HS(HS), m_HI(HI), m_HO(HO),
+      m_state(Maintenance), m_mode(Manual)
 {
-    m_CS = cfg->GetHardware<Valve>("CS"); // Cold Supply
-    m_HS = cfg->GetHardware<Valve>("HS"); // Hot Supply
-    m_HI = cfg->GetHardware<Valve>("HI"); // Heater in
-    m_HO = cfg->GetHardware<Valve>("HO"); // Heater out
-
     // We know functions, so we know descriptions
     m_CS->m_description = "Cold supply";
     m_HS->m_description = "Hot supply";

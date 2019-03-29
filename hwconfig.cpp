@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "hwconfig.h"
+#include "hwstate.h"
 #include "logging.h"
 
 #ifdef _WIN32
@@ -31,6 +32,12 @@ DeviceType::DeviceType(const char *type)
     g_DeviceTypes = this;
 }
 
+std::ostream &operator<<(std::ostream& os, const xmlNode &node)
+{
+    os << " at " << node.doc->name << " line " << node.line;
+    return os;
+}
+
 int GetIntProp(xmlNode *node, const char *name, int defVal)
 {
     const char *str = GetStrProp(node, name);
@@ -39,20 +46,18 @@ int GetIntProp(xmlNode *node, const char *name, int defVal)
         char *p;
         int ret = strtol(str, &p, 0);
 
-		if (*p == 0) {
-			return ret;
-		} else {
-			Log(Log::ERR) << "Invalid value for \"" << name << "\" attribute at "
-				          << node->doc->name << " line " << node->line;
-			return -1;
-	    }
-    } else {
-		if (defVal == -1) {
-			Log(Log::ERR) << "Missing mandatory \"" << name << "\" attribute at "
-				<< node->doc->name << " line " << node->line;
-		}
-        return defVal;
+	if (*p == 0) {
+	    return ret;
+	} else {
+	    Log(Log::ERR) << "Invalid value for \"" << name << "\" attribute " << *node;
+	    return -1;
 	}
+    } else {
+	if (defVal == -1) {
+	    Log(Log::ERR) << "Missing mandatory \"" << name << "\" attribute " << *node;
+	}
+        return defVal;
+    }
 }
 
 float GetFloatProp(xmlNode *node, const char *name)
@@ -215,27 +220,27 @@ void HWConfig::createValveController(xmlNode *vcNode)
     for (node = vcNode->children; node; node = node->next) {
         if (node->type == XML_ELEMENT_NODE) {
             const char *name = (const char *)node->name;
-            Hardware *dev;
 
             if (!strcmp(name, "cold_supply")) {
-               dev = createValve(node);
+               m_CS = createValve(node);
+               AddHardware(m_CS);
             } else if (!strcmp(name, "hot_supply")) {
-               dev = createValve(node);
+                m_HS = createValve(node);
+               AddHardware(m_HS);
             } else if (!strcmp(name, "heater_in")) {
-               dev = createValve(node);
+                m_HI = createValve(node);
+               AddHardware(m_HI);
             } else if (!strcmp(name, "heater_out")) {
-               dev = createValve(node);
+                m_HO = createValve(node);
+               AddHardware(m_HO);
             } else if (!strcmp(name, "hot_supply_temp")) {
-               dev = createDevice(node);
+                m_HST = createDeviceOfClass<Thermometer>(node);
+               AddHardware(m_HST);
             } else {
                 Log(Log::ERR) << "Unknown valve controller component \""
-                                << name << '"';
+                                << name << '"' << *node;
                 continue;
             }
-
-            // TODO: Properly create HWState here and connect inputs
-
-            AddHardware(dev);
         }
     }
 }
@@ -301,6 +306,8 @@ Valve *HWConfig::createValve(xmlNode *vNode)
 }
 
 HWConfig::HWConfig()
+    : m_HWState(nullptr),
+      m_CS(nullptr), m_HS(nullptr), m_HI(nullptr), m_HO(nullptr), m_HST(nullptr)
 {
     LIBXML_TEST_VERSION
     xmlDoc *doc = xmlReadFile(configPath, NULL, 0);
@@ -329,10 +336,17 @@ HWConfig::HWConfig()
 
     xmlFreeDoc(doc);
     xmlCleanupParser();
+
+    // HWState is our main state machine and it manages all other components,
+    // so we create it after everything else
+    m_HWState = new HWState(this, m_CS, m_HS, m_HI, m_HO, m_HST);
 }
 
 HWConfig::~HWConfig()
 {
+    if (m_HWState)
+        delete m_HWState;
+
     for (auto& hw : m_hw)
         delete hw.second;
 

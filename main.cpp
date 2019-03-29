@@ -51,29 +51,27 @@ private:
 int main(void)
 {
 #ifdef _WIN32
-	ConsoleLog mainLog;
+    ConsoleLog mainLog;
 #else
-	FileLog mainLog("/var/log/aquarius.log");
+    FileLog mainLog("/var/log/aquarius.log");
 #endif
-	AddLogListener(&mainLog);
+    AddLogListener(&mainLog);
     InitUserDB();
 
     HWConfig* theConfig = new HWConfig();
-    HWState* theState = new HWState(theConfig);
-    HTTPServer *theServer = new HTTPServer(theConfig, theState);
+    HTTPServer *theServer = new HTTPServer(theConfig, theConfig->m_HWState);
 
     Log(Log::INFO) << "System started";
 
     for (;;) {
         CheckSessions();
-        theState->Poll();
+        theConfig->m_HWState->Poll();
         sleep(1);
     }
 
     delete theServer;
-    delete theState;
     delete theConfig;
-	RemoveLogListener(&mainLog);
+    RemoveLogListener(&mainLog);
 
     return 0;
 }
