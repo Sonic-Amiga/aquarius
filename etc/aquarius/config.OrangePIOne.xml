@@ -36,9 +36,9 @@
     <temp_sensor id="HT" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1302/temperature9" threshold="45"/>
 </heater_controller>
 <leak_detector>
-    <switch id="LD0" type="PCFSwitch" device="PCF0" pin="3" inverted="1" description="Zone 0"/>
-    <switch id="LD1" type="PCFSwitch" device="PCF0" pin="2" inverted="1" description="Zone 1"/>
-    <switch id="LD2" type="PCFSwitch" device="PCF0" pin="1" inverted="1" description="Zone 2"/>
-    <switch id="LD3" type="PCFSwitch" device="PCF0" pin="0" inverted="1" description="Zone 3"/>
+    <switch id="LD0" type="PCFSwitch" device="PCF0" pin="3" inverted="1" description="Plumbing cabinet"/>
+    <switch id="LD1" type="PCFSwitch" device="PCF0" pin="2" inverted="1" description="Kitchen"/>
+    <switch id="LD2" type="PCFSwitch" device="PCF0" pin="1" inverted="1" description="Bathroom 1"/>
+    <switch id="LD3" type="PCFSwitch" device="PCF0" pin="0" inverted="1" description="Bathroom 2"/>
 </leak_detector>
 </config>
