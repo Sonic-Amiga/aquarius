@@ -229,9 +229,12 @@ static const char *stateStrings[] =
     "Maintenance"
 };
 
-HWState::HWState(HWConfig* cfg, Valve *CS, Valve *HS, Valve *HI, Valve *HO, Thermometer *HST)
-    : m_Cfg(cfg), m_CS(CS), m_HS(HS), m_HI(HI), m_HO(HO),
-      m_state(Maintenance), m_mode(Manual)
+HWState::HWState(HWConfig* cfg, Valve *CS, Valve *HS, Valve *HI, Valve *HO, Thermometer *HST,
+                 time_t recoverDelay)
+    : m_Cfg(cfg), m_CS(CS), m_HS(HS), m_HI(HI), m_HO(HO), m_HST(HST),
+      m_state(Maintenance), m_mode(Manual),
+      // If hot water is OK at startup, we'll switch immediately.
+      m_RecoverTime(~0), m_RecoverDelay(recoverDelay)
 {
     // We know functions, so we know descriptions
     m_CS->m_description = "Cold supply";
@@ -436,6 +439,40 @@ void HWState::Poll()
         }
 
         m_Heater->Poll(heaterInState);
+    }
+
+    m_HST->GetValue(); // This updates the thermometer state
+    int hstState = m_HST->GetState();
+
+    switch (hstState)
+    {
+    case Thermometer::Fault:
+        // No idea what to do yet; we cannot make any decisions
+        // The notification has already been sent by the thermometer class itself
+        m_RecoverTime = 0;
+        break;
+
+    case Thermometer::Cold:
+        m_RecoverTime = 0;
+        if (AutoModeOK() &&
+            ((m_state == Central) || (m_state == Closed) || (m_state == Maintenance)))
+        {
+            Log(Log::WARN) << "Hot water temperature dropped, switching to heater";
+            ApplyState(Heater);
+        }
+        break;
+
+    case Thermometer::Normal:
+        if (m_RecoverTime == 0) {
+            m_RecoverTime = GetMonotonicTime() + m_RecoverDelay;
+        } else if ((GetMonotonicTime() >= m_RecoverTime) && AutoModeOK() &&
+                   ((m_state == Heater) || (m_state == Closed) || (m_state == Maintenance)))
+        {
+            Log(Log::INFO) << "Hot water temperature restored, switching to central supply";
+            ApplyState(Central);
+        }
+     
+        break;
     }
 
     m_Lock.unlock();

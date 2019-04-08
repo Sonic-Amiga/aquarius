@@ -103,7 +103,8 @@ public:
         FullManual // Maintenance
     } ctlmode_t;
 
-    HWState(HWConfig* cfg, Valve *CS, Valve *HS, Valve *HI, Valve *HO, Thermometer *HST);
+    HWState(HWConfig* cfg, Valve *CS, Valve *HS, Valve *HI, Valve *HO, Thermometer *HST,
+            time_t recoverDelay);
     ~HWState();
 
     void Poll();
@@ -150,12 +151,19 @@ private:
     bool SaveState(state_t state, ctlmode_t mode);
     void ApplyState(state_t state);
 
+    // Check whether automatic operation is permitted
+    bool AutoModeOK()
+    {
+        return ((m_mode == Auto) && (m_LeakSensor->GetState() != LeakSensor::Alarm));
+    }
+
     HWConfig* m_Cfg;
 
     Valve* m_CS;
     Valve* m_HS;
     Valve* m_HI;
     Valve* m_HO;
+    Thermometer *m_HST;
 
     LeakSensor      * m_LeakSensor;
     HeaterController* m_Heater;
@@ -163,6 +171,8 @@ private:
     state_t           m_state;
     unsigned int      m_step;      // State transition step
     ctlmode_t         m_mode;
+    time_t            m_RecoverTime;  // Time of cental supply recovery
+    time_t            m_RecoverDelay; // Delay before accepting the recovery
 
     std::mutex        m_Lock;
 };

@@ -23,6 +23,7 @@
         <open_relay type="DummyRelay"/>
     </heater_out>
     <hot_supply_temp id="HST" type="FileIOThermometer" path="C:\aquarius\fileio\hot_supply_temp" threshold="45"/>
+    <recovery_delay>10</recovery_delay>
 </valve_controller>
 <heater_controller>
     <power_relay id="HR" type="DummyRelay"/>

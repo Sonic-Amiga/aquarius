@@ -38,20 +38,26 @@ std::ostream &operator<<(std::ostream& os, const xmlNode &node)
     return os;
 }
 
+static int ReadInt(const char *str)
+{
+    char *p;
+    int ret = strtol(str, &p, 0);
+
+    return (*p == 0) ? ret : -1;
+}
+
 int GetIntProp(xmlNode *node, const char *name, int defVal)
 {
     const char *str = GetStrProp(node, name);
 
     if (str) {
-        char *p;
-        int ret = strtol(str, &p, 0);
+        int ret = ReadInt(str);
 
-	if (*p == 0) {
-	    return ret;
-	} else {
+        if (ret == -1) {
 	    Log(Log::ERR) << "Invalid value for \"" << name << "\" attribute " << *node;
-	    return -1;
 	}
+
+        return ret;
     } else {
 	if (defVal == -1) {
 	    Log(Log::ERR) << "Missing mandatory \"" << name << "\" attribute " << *node;
@@ -84,6 +90,18 @@ Hardware *HWConfig::GetDeviceProp(xmlNode *node, const char *name)
     } else {
         return nullptr;
     }
+}
+
+static int GetIntContent(xmlNode *node)
+{
+    for (xmlNode *n = node->children; n; n = n->next)
+    {
+        if (n->type == XML_TEXT_NODE) {
+            return ReadInt((const char *)n->content);
+        }
+    }
+
+    return -1;
 }
 
 void HWConfig::readNodes(xmlNode *startNode, const char *name, void(HWConfig::*parserFunc)(xmlNode *))
@@ -220,6 +238,7 @@ void HWConfig::createValveController(xmlNode *vcNode)
     Valve *HI = nullptr;
     Valve *HO = nullptr;
     Thermometer *HST = nullptr;
+    int recoveryDelay = -1;
     xmlNode *node;
 
     for (node = vcNode->children; node; node = node->next) {
@@ -241,6 +260,8 @@ void HWConfig::createValveController(xmlNode *vcNode)
             } else if (!strcmp(name, "hot_supply_temp")) {
                 HST = createDeviceOfClass<Thermometer>(node);
                AddHardware(HST);
+            } else if (!strcmp(name, "recovery_delay")) {
+                recoveryDelay = GetIntContent(node);
             } else {
                 Log(Log::ERR) << "Unknown valve controller component \""
                                 << name << '"' << *node;
@@ -249,7 +270,12 @@ void HWConfig::createValveController(xmlNode *vcNode)
         }
     }
 
-    m_HWState = new HWState(this, CS, HS, HI, HO, HST);
+    if (recoveryDelay == -1) {
+        Log(Log::ERR) << "Valve controller recovery delay is not specified" << *vcNode;
+        return;
+    }
+
+    m_HWState = new HWState(this, CS, HS, HI, HO, HST, recoveryDelay);
 }
 
 Valve *HWConfig::createValve(xmlNode *vNode)
