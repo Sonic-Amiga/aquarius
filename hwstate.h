@@ -67,6 +67,7 @@ private:
 
     void ApplyState(int state);
     void StartWash();
+    void RefillAndEndWash();
     void EndWash();
 
     HWState* m_HW;

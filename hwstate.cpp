@@ -148,30 +148,29 @@ void HeaterController::Poll(int s_HI)
                 m_washStep = WashStep::Drain;
             }
             if ((m_washStep == WashStep::Drain) && (GetMonotonicTime() > m_washTimer)) {
-                m_Drain->SetState(false);
-                m_washTimer = GetMonotonicTime() + RefillDelay;
-                m_washStep = WashStep::Refill;
+                RefillAndEndWash();
             }
-            if (m_washStep == WashStep::Refill) {
-                switch (s_HP)
-                {
-                case Switch::Off:
-                    if (GetMonotonicTime() > m_washTimer) {
-                        Log(Log::WARN) << "Heater failed to re-pressurize";
-                        ApplyState(Protection);
-                    }
-                    break;
-
-                case Switch::On:
-                    EndWash();
-                    ApplyState(OK);
-                    break;
-                }
-            }
-        } else if (s_HI != Valve::Opening) {
+        } else if ((s_HI != Valve::Opening) && (m_washStep != WashStep::Refill)) {
             Log(Log::WARN) << "Heater wash aborted";
-            EndWash();
-            m_State = Pressurize;
+            RefillAndEndWash();
+        }
+
+        // Refill is done even after the abort
+        if (m_washStep == WashStep::Refill) {
+            switch (s_HP)
+            {
+            case Switch::Off:
+                if (GetMonotonicTime() > m_washTimer) {
+                    Log(Log::WARN) << "Heater failed to re-pressurize";
+                    ApplyState(Protection);
+                }
+                break;
+
+            case Switch::On:
+                EndWash();
+                ApplyState(OK);
+                break;
+            }
         }
     }
     else
@@ -197,6 +196,13 @@ void HeaterController::StartWash()
         m_State = Wash;
         m_washStep = Fill;
     }
+}
+
+void HeaterController::RefillAndEndWash()
+{
+    m_Drain->SetState(false);
+    m_washTimer = GetMonotonicTime() + RefillDelay;
+    m_washStep = WashStep::Refill;
 }
 
 void HeaterController::EndWash()
