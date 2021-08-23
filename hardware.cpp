@@ -66,8 +66,8 @@ void Valve::ReportFault(const char* s)
 
 void Valve::GetStateFromSwitches()
 {
-	if (!HaveSwitches())
-		return;
+    if (!HaveSwitches())
+	return;
 
     int openSt  = m_OpenSwitch->GetState();
     int closeSt = m_CloseSwitch->GetState();
@@ -80,9 +80,9 @@ void Valve::GetStateFromSwitches()
         // This should not happen, likely electronics fault
         ReportFault("reports both open and closed");
     } else if ((openSt == Switch::On) && (m_State == Opening)) {
-        m_State = Open;
+        ReportState(Open);
     } else if ((closeSt == Switch::On) && (m_State == Closing)) {
-        m_State = Closed;
+        ReportState(Closed);
     }
 }
 
@@ -104,7 +104,7 @@ bool Valve::SetState(int state, bool force)
             if (m_State != Open) {
                 if (m_State != Opening)
                     m_StateChange = GetMonotonicTime();
-                m_State = Opening;
+                ReportState(Opening);
             }
             break;
 
@@ -114,14 +114,14 @@ bool Valve::SetState(int state, bool force)
             if (m_State != Closed) {
                 if (m_State != Closing)
                     m_StateChange = GetMonotonicTime();
-                m_State = Closing;
+                ReportState(Closing);
             }
             break;
 
         case Reset:
             m_ClosePin->SetState(false);
             m_OpenPin->SetState(false);
-            m_State = Reset;
+            ReportState(Reset);
             break;
         }
 
@@ -137,18 +137,18 @@ void Valve::Poll()
 
     if ((m_State == Opening) || (m_State == Closing)) {
         if (GetMonotonicTime() - m_StateChange > m_StateChangeTimeout) {
-			if (HaveSwitches()) {
-				// Timeout exceeded, mechanical fault
-				Log(Log::ERR) << m_description << " valve "
-					          << statusStrings[m_State] << " timeout";
-				m_State = Fault;
-			} else if (m_State == Opening) {
-				// Poor man's motors without position sensors. We just want for
-				// enough time and assume they worked.
-				m_State = Open;
-			} else {
-				m_State = Closed;
-			}
+	    if (HaveSwitches()) {
+		// Timeout exceeded, mechanical fault
+		Log(Log::ERR) << m_description << " valve "
+		              << statusStrings[m_State] << " timeout";
+		ReportState(Fault);
+            } else if (m_State == Opening) {
+		// Poor man's motors without position sensors. We just want for
+		// enough time and assume they worked.
+		ReportState(Open);
+            } else {
+		ReportState(Closed);
+            }
         }
     }
 }

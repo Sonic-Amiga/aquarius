@@ -23,11 +23,19 @@ public:
     }
 
     status_t GetState() {return m_state;}
-    void     SetState(status_t state) {m_state = state;}
+    void SetState(status_t state)
+    {
+        ReportState(state);
+    }
 
     bool Poll();
 
 private:
+    void ReportState(status_t state)
+    {
+        m_state = state;
+    }
+
     std::vector<Switch*> m_Sensors;
     int*                 m_SensorState;
     status_t             m_state;
@@ -69,6 +77,11 @@ private:
     void StartWash();
     void RefillAndEndWash();
     void EndWash();
+
+    void ReportState(int state)
+    {
+        m_State = state;
+    }
 
     HWState* m_HW;
 
@@ -151,6 +164,16 @@ private:
     bool LoadState();
     bool SaveState(state_t state, ctlmode_t mode);
     void ApplyState(state_t state);
+
+    void ReportState(state_t state)
+    {
+        m_state = state;
+    }
+
+    void ReportMode(ctlmode_t mode)
+    {
+        m_mode = mode;
+    }
 
     // Check whether automatic operation is permitted
     bool AutoModeOK()

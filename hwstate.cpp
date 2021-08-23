@@ -43,7 +43,7 @@ bool LeakSensor::Poll()
         case Switch::On:
             Log(Log::WARN) << "Leak detected in " << s->m_description;
             if (m_state == Enabled) {
-                m_state = Alarm;
+                ReportState(Alarm);
                 alarm = true;
             }
             break;
@@ -86,7 +86,7 @@ void HeaterController::SetState(int state)
 
 void HeaterController::ApplyState(int state)
 {
-    m_State = state;
+    ReportState(state);
 
     switch (state)
     {
@@ -193,7 +193,7 @@ void HeaterController::StartWash()
     if (m_HW->InFinalState())
     {
         m_HW->HeaterWash(true);
-        m_State = Wash;
+        ReportState(Wash);
         m_washStep = Fill;
     }
 }
@@ -300,7 +300,7 @@ bool HWState::LoadState()
         return false;
     }
 
-    m_mode = st.Mode;
+    ReportMode(st.Mode);
     if (m_mode == Manual) {
         // After we exit relays stay in their original states, but configuring
         // I/O hardware switches all of them off. Wait 0.5 sec before
@@ -372,7 +372,7 @@ void HWState::Poll()
     if (s_CS == Valve::Fault || s_HS == Valve::Fault ||
         s_HI == Valve::Fault || s_HO == Valve::Fault)
     {
-        m_state = Fault;
+        ReportState(Fault);
         m_Heater->Control(false);
     }
     else
@@ -382,7 +382,7 @@ void HWState::Poll()
         case Closing:
             if (s_CS == Valve::Closed && s_HS == Valve::Closed &&
                 s_HI == Valve::Closed && s_HO == Valve::Closed) {
-                m_state = Closed;
+                ReportState(Closed);
             }
             break;
 
@@ -397,7 +397,7 @@ void HWState::Poll()
                 }
                 if (m_step == 1) {
                     if (s_CS == Valve::Open && s_HS == Valve::Open) {
-                        m_state = Central;
+                        ReportState(Central);
                     }
                 }
             }
@@ -418,7 +418,7 @@ void HWState::Poll()
                     if (s_HI == Valve::Open && s_HO == Valve::Open &&
                         s_CS == Valve::Open) {
                         m_Heater->Control(true);
-                        m_state = Heater;
+                        ReportState(Heater);
                     }
                 }
             }
@@ -496,7 +496,7 @@ void HWState::ApplyState(state_t state)
         m_HS->SetState(Valve::Closed, true);
         m_HI->SetState(Valve::Closed, true);
         m_HO->SetState(Valve::Closed, true);
-        m_state = Closing;
+        ReportState(Closing);
         break;
 
     case Central:
@@ -504,16 +504,16 @@ void HWState::ApplyState(state_t state)
 
         m_HI->SetState(Valve::Closed);
         m_HO->SetState(Valve::Closed);
-        m_state = SwitchToCentral;
+        ReportState(SwitchToCentral);
         break;
 
     case Heater:
         m_HS->SetState(Valve::Closed);
-        m_state = SwitchToHeater;
+        ReportState(SwitchToHeater);
         break;
 
     default:
-        m_state = state;
+        ReportState(state);
         break;
     }
 
@@ -596,7 +596,7 @@ void HWState::SetMode(ctlmode_t mode, const std::string &user)
     m_Lock.lock();
 
     SaveState(m_state, mode);
-    m_mode = mode;
+    ReportMode(mode);
 
     m_Lock.unlock();
 }
@@ -664,7 +664,7 @@ int HWState::ValveControl(const char* id, int& state, const std::string& user)
     if (m_mode != FullManual) {
         ret = EPERM;
     } else if (hw->SetState(state, true)) {
-        m_state = Maintenance;
+        ReportState(Maintenance);
         state = hw->GetState();
         ret = 0;
     } else {
@@ -705,7 +705,7 @@ int HWState::RelayControl(const char* id, bool &state, const std::string& user)
         ret = EPERM;
     } else {
         hw->SetState(state);
-        m_state = Maintenance;
+        ReportState(Maintenance);
         state = hw->GetState();
         ret = 0;
     }

@@ -23,7 +23,7 @@ public:
 
     void SetState(bool st)
     {
-        m_State = st;
+        ReportState(st);
         ApplyState(st ? !m_ResetState : m_ResetState);
     }
 
@@ -33,9 +33,14 @@ public:
     }
 
 protected:
-	virtual void ApplyState(bool on) = 0;
+    virtual void ApplyState(bool on) = 0;
 
 private:
+    void ReportState(bool state)
+    {
+        m_State = state;
+    }
+
     bool m_State;
     bool m_ResetState;
 };
@@ -53,7 +58,7 @@ public:
     Switch(bool inverted) : m_activeLow(inverted)
     {}
 
-	virtual int GetState() = 0;
+    virtual int GetState() = 0;
 
 protected:
     bool m_activeLow;
@@ -85,8 +90,15 @@ protected:
         return 0.0;
     }
 
-    int m_State;
+    void ReportState(int state)
+    {
+        m_State = state;
+    }
+
     float m_Threshold;
+
+private:
+    int m_State;
 };
 
 class Valve : public Hardware
@@ -116,10 +128,16 @@ public:
 private:
     void ReportFault(const char* s);
     void GetStateFromSwitches();
-	bool HaveSwitches()
-	{
-		return m_OpenSwitch && m_CloseSwitch;
-	}
+
+    bool HaveSwitches()
+    {
+	return m_OpenSwitch && m_CloseSwitch;
+    }
+
+    void ReportState(int state)
+    {
+        m_State = state;
+    }
 
     int    m_State;
     time_t m_StateChange;
