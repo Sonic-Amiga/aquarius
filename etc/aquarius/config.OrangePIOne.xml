@@ -1,8 +1,9 @@
 <config>
-<bus type="WPII2C">
+  <logger type="file" path="/var/log/aquarius.log" level="INFO" />
+  <bus type="WPII2C">
     <device type="PCF857x" id="PCF0" address="0x20" pincount="16"/>
-</bus>
-<valve_controller>
+  </bus>
+  <valve_controller>
     <cold_supply id="CS" timeout="30">
         <close_relay type="WPIRelay" pin="1" inactive="1"/>
         <open_relay type="WPIRelay" pin="0" inactive="1"/>
@@ -30,17 +31,17 @@
     <hot_supply_temp id="HST" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1301/temperature9" threshold="45"/>
     <!-- The hot supply has to be stable for 3 mins before we switch to it -->
     <recovery_delay>180</recovery_delay>
-</valve_controller>
-<heater_controller>
+  </valve_controller>
+  <heater_controller>
     <power_relay id="HR" type="WPIRelay" pin="12" inactive="1"/>
     <drain_relay id="HD" type="WPIRelay" pin="13" inactive="1"/>
     <pressure_switch id="HP" type="PCFSwitch" device="PCF0" pin="6" inverted="1"/>
     <temp_sensor id="HT" type="FileIOThermometer" path="/mnt/1wire/28.9C09E91B1302/temperature9" threshold="45"/>
-</heater_controller>
-<leak_detector>
+  </heater_controller>
+  <leak_detector>
     <switch id="LD0" type="PCFSwitch" device="PCF0" pin="3" inverted="1" description="Plumbing cabinet"/>
     <switch id="LD1" type="PCFSwitch" device="PCF0" pin="2" inverted="1" description="Kitchen"/>
     <switch id="LD2" type="PCFSwitch" device="PCF0" pin="1" inverted="1" description="Bathroom 1"/>
     <switch id="LD3" type="PCFSwitch" device="PCF0" pin="0" inverted="1" description="Bathroom 2"/>
-</leak_detector>
+  </leak_detector>
 </config>

@@ -107,6 +107,7 @@ private:
 
     Hardware *createDevice(xmlNode *node);
     void readNodes(xmlNode *startNode, const char *name, void(HWConfig::*parserFunc)(xmlNode *));
+    void createLogger(xmlNode* node);
     void createBus(xmlNode *node);
     void createDeviceOnBus(xmlNode *node);
     void createHeater(xmlNode *node);
@@ -133,6 +134,7 @@ private:
     std::map<std::string, Hardware*> m_hw;
     std::vector<Switch*> m_LeakDetectors;
     std::vector<Hardware *>m_AnonHW;
+    std::vector<LogListener *> m_Loggers;
 };
 
 class DeviceType
@@ -143,6 +145,16 @@ public:
 
     const char *m_Type;
     DeviceType *m_Next;
+};
+
+class LoggerType
+{
+public:
+    LoggerType(const char* type);
+    virtual LogListener* CreateLogger(xmlNode *, HWConfig *) = 0;
+
+    const char *m_Type;
+    LoggerType* m_Next;
 };
 
 /*
@@ -160,5 +172,15 @@ public:									\
 };									\
 static name ## _Factory name ## _type;					\
 Hardware * name ## _Factory::CreateDevice
+
+#define REGISTER_LOGGER_TYPE(name)					\
+class name ## _Factory : public LoggerType				\
+{									\
+public:									\
+    name ## _Factory() : LoggerType( #name ) {}				\
+    virtual LogListener *CreateLogger(xmlNode *, HWConfig *) override;	\
+};									\
+static name ## _Factory name ## _type;					\
+LogListener * name ## _Factory::CreateLogger
 
 #endif

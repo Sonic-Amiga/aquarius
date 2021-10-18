@@ -5,7 +5,8 @@
     readings by writing values to their respective files
 -->
 <config>
-<valve_controller>
+  <logger type="console" level="DEBUG" />
+  <valve_controller>
     <cold_supply id="CS" timeout="10">
         <close_relay type="DummyRelay"/>
         <open_relay type="DummyRelay"/>
@@ -24,17 +25,17 @@
     </heater_out>
     <hot_supply_temp id="HST" type="FileIOThermometer" path="C:\aquarius\fileio\hot_supply_temp" threshold="45"/>
     <recovery_delay>10</recovery_delay>
-</valve_controller>
-<heater_controller>
+  </valve_controller>
+  <heater_controller>
     <power_relay id="HR" type="DummyRelay"/>
     <drain_relay id="HD" type="DummyRelay"/>
     <pressure_switch id="HP" type="DummySwitch" inverted="1"/>
     <temp_sensor id="HT" type="FileIOThermometer" path="C:\aquarius\fileio\heater_temp" threshold="45"/>
-</heater_controller>
-<leak_detector>
+  </heater_controller>
+  <leak_detector>
     <switch id="LD0" type="DummySwitch" description="Plumbing cabinet"/>
     <switch id="LD1" type="DummySwitch" description="Kitchen"/>
     <switch id="LD2" type="DummySwitch" description="Bathroom 1"/>
     <switch id="LD3" type="DummySwitch" description="Bathroom 2"/>
-</leak_detector>
+  </leak_detector>
 </config>

@@ -32,6 +32,15 @@ DeviceType::DeviceType(const char *type)
     g_DeviceTypes = this;
 }
 
+static LoggerType* g_LoggerTypes = nullptr;
+
+LoggerType::LoggerType(const char *type)
+    : m_Type(type)
+{
+    m_Next = g_LoggerTypes;
+    g_LoggerTypes = this;
+}
+
 std::ostream &operator<<(std::ostream& os, const xmlNode &node)
 {
     os << " at " << node.doc->name << " line " << node.line;
@@ -160,6 +169,35 @@ Hardware *HWConfig::createDevice(xmlNode *node)
     }
 
     return dev;
+}
+
+void HWConfig::createLogger(xmlNode* node)
+{
+    const char *type = GetStrProp(node, "type");
+    LoggerType* lt;
+
+    if (!type) {
+        // Loggers are the first thing to instantiate; errors at this step
+        // are practically critical, so we log them to console. Anyways we don't have
+        // anything else at this point
+        std::cerr << "Malformed configuration element " << node->name << std::endl;
+        return;
+    }
+
+    for (lt = g_LoggerTypes; lt; lt = lt->m_Next) {
+        if (!strcmp(lt->m_Type, type))
+            break;
+    }
+
+    if (!lt) {
+        std::cerr << "Unknown logger type " << type << std::endl;
+        return;
+    }
+
+    LogListener *logger = lt->CreateLogger(node, this);
+
+    m_Loggers.push_back(logger);
+    AddLogListener(logger);
 }
 
 void HWConfig::createBus(xmlNode *node)
@@ -360,6 +398,7 @@ HWConfig::HWConfig()
     }
 
     if (startNode) {
+        readNodes(startNode, "logger", &HWConfig::createLogger);
         readNodes(startNode, "bus", &HWConfig::createBus);
         readNodes(startNode, "heater_controller", &HWConfig::createHeater);
         readNodes(startNode, "leak_detector", &HWConfig::createLeakDetector);
@@ -385,4 +424,9 @@ HWConfig::~HWConfig()
 
     for (auto hw : m_AnonHW)
         delete hw;
+
+    for (LogListener* logger : m_Loggers) {
+        RemoveLogListener(logger);
+        delete logger;
+    }
 }
