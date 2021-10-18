@@ -14,13 +14,24 @@ const char* const Relay::statusStrings[] =
 float Thermometer::GetValue()
 {
     float temp = Measure();
+    int state;
 
     if (isnan(temp)) {
-        m_State = Fault;
+        state = Fault;
     } else if (temp >= m_Threshold) {
-        m_State = Normal;
+        state = Normal;
     } else {
-        m_State = Cold;
+        state = Cold;
+    }
+
+    // GetValue() is in fact polled, avoid duplicating events
+    if (state != m_State) {
+        m_State = state;
+        Hardware::ReportState("thermometer", state);
+    }
+    if (temp != m_LastValue && !(isnan(temp) && isnan(m_LastValue))) {
+        m_LastValue = temp;
+        Hardware::ReportValue("thermometer", temp);
     }
 
     return temp;
@@ -59,7 +70,7 @@ void Valve::ReportFault(const char* s)
 {
     // Avoid flooding the log
     if (m_State != Fault) {
-        m_State = Fault;
+        ReportState(Fault);
         Log(Log::ERR) << m_description << " valve " << s;
     }
 }
@@ -69,8 +80,8 @@ void Valve::GetStateFromSwitches()
     if (!HaveSwitches())
 	return;
 
-    int openSt  = m_OpenSwitch->GetState();
-    int closeSt = m_CloseSwitch->GetState();
+    int openSt  = m_OpenSwitch->poll();
+    int closeSt = m_CloseSwitch->poll();
 
     if (openSt == Switch::Fault) {
         ReportFault("open sensor fault");

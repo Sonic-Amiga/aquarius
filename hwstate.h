@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "hwconfig.h"
+#include "event_bus.h"
 #include "userdb.h"
 
 class LeakSensor
@@ -34,6 +35,7 @@ private:
     void ReportState(status_t state)
     {
         m_state = state;
+        SendEvent("LeakSensor/state", state);
     }
 
     std::vector<Switch*> m_Sensors;
@@ -81,6 +83,7 @@ private:
     void ReportState(int state)
     {
         m_State = state;
+        SendEvent("Heater/state", state);
     }
 
     HWState* m_HW;
@@ -168,11 +171,13 @@ private:
     void ReportState(state_t state)
     {
         m_state = state;
+        SendEvent("ValveController/state", state);
     }
 
     void ReportMode(ctlmode_t mode)
     {
         m_mode = mode;
+        SendEvent("ValveController/mode", mode);
     }
 
     // Check whether automatic operation is permitted

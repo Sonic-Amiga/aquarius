@@ -4,6 +4,8 @@
 #include <time.h>
 #include <string>
 
+#include "event_bus.h"
+
 class Hardware
 {
 public:
@@ -11,6 +13,19 @@ public:
 
     std::string m_name;
     std::string m_description;
+
+protected:
+    void ReportState(const std::string& prefix, int value)
+    {
+        if (!m_name.empty())
+            SendEvent(prefix + '/' + m_name + "/state", value);
+    }
+
+    void ReportValue(const std::string& prefix, float value)
+    {
+        if (!m_name.empty())
+            SendEvent(prefix + '/' + m_name + "/value", value);
+    }
 };
 
 class Relay : public Hardware
@@ -39,6 +54,7 @@ private:
     void ReportState(bool state)
     {
         m_State = state;
+        Hardware::ReportState("relay", state);
     }
 
     bool m_State;
@@ -52,16 +68,32 @@ public:
     {
         Off,
         On,
-        Fault
+        Fault,
+        Reset
     };
 
-    Switch(bool inverted) : m_activeLow(inverted)
+    Switch(bool inverted) : m_activeLow(inverted), m_LastState(Reset)
     {}
 
     virtual int GetState() = 0;
 
+    int poll()
+    {
+        int state = GetState();
+
+        if (state != m_LastState) {
+            m_LastState = state;
+            ReportState("switch", state);
+        }
+
+        return state;
+    }
+
 protected:
     bool m_activeLow;
+
+private:
+    int m_LastState;
 };
 
 class Thermometer : public Hardware
@@ -74,7 +106,7 @@ public:
         Normal
     };
 
-    Thermometer(float thresh) : m_State(Normal), m_Threshold(thresh)
+    Thermometer(float thresh) : m_State(Normal), m_Threshold(thresh), m_LastValue(0)
     {}
 
     virtual int GetState()
@@ -90,15 +122,11 @@ protected:
         return 0.0;
     }
 
-    void ReportState(int state)
-    {
-        m_State = state;
-    }
-
     float m_Threshold;
 
 private:
-    int m_State;
+    int   m_State;
+    float m_LastValue;
 };
 
 class Valve : public Hardware
@@ -137,6 +165,7 @@ private:
     void ReportState(int state)
     {
         m_State = state;
+        Hardware::ReportState("valve", state);
     }
 
     int    m_State;

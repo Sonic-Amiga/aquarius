@@ -11,7 +11,8 @@ set (SRCS main.cpp
           hardware.cpp
           i2c_hw.cpp
           logging.cpp
-          userdb.cpp)
+          userdb.cpp
+          event_bus.cpp)
 
 set (CMAKE_CXX_STANDARD 11)
 

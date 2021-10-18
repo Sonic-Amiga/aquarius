@@ -30,7 +30,7 @@ bool LeakSensor::Poll()
 
     for (size_t i = 0; i < m_Sensors.size(); i++) {
         Switch* s = m_Sensors[i];
-        int ss = s->GetState();
+        int ss = s->poll();
 
         if (m_SensorState[i] == ss) {
             // Avoid flooding the log
@@ -125,7 +125,7 @@ void HeaterController::Control(bool on)
 
 void HeaterController::Poll(int s_HI)
 {
-    int s_HP = m_Pressure->GetState();
+    int s_HP = m_Pressure->poll();
 
     if (s_HP == Switch::Fault) {
         if (m_State != Fault) {
