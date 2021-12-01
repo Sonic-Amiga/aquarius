@@ -25,12 +25,26 @@ int main(void)
 
     HWConfig* theConfig = new HWConfig();
     HTTPServer *theServer = new HTTPServer(theConfig, theConfig->m_HWState);
+    bool freshStart = true;
 
     Log(Log::INFO) << "System started";
 
     for (;;) {
         CheckSessions();
         theConfig->m_HWState->Poll();
+
+        if (freshStart) {
+            // We've just booted up and initialized, report state for all the actuators
+            // We need to do it only once, actuators will report changes when they happen
+            for (const Valve* v : theConfig->GetHWList<Valve>()) {
+                v->ReportCurrentState();
+            }
+            for (const Relay* r : theConfig->GetHWList<Relay>()) {
+                r->ReportCurrentState();
+            }
+            freshStart = false;
+        }
+
         sleep(1);
     }
 

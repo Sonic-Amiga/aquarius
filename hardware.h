@@ -15,13 +15,13 @@ public:
     std::string m_description;
 
 protected:
-    void ReportState(const std::string& prefix, int value)
+    void ReportState(const std::string& prefix, int value) const
     {
         if (!m_name.empty())
             SendEvent(prefix + '/' + m_name + "/state", value);
     }
 
-    void ReportValue(const std::string& prefix, float value)
+    void ReportValue(const std::string& prefix, float value) const
     {
         if (!m_name.empty())
             SendEvent(prefix + '/' + m_name + "/value", value);
@@ -47,6 +47,11 @@ public:
         return m_State;
     }
 
+    void ReportCurrentState() const
+    {
+        Hardware::ReportState("relay", m_State);
+    }
+
 protected:
     virtual void ApplyState(bool on) = 0;
 
@@ -54,7 +59,7 @@ private:
     void ReportState(bool state)
     {
         m_State = state;
-        Hardware::ReportState("relay", state);
+        ReportCurrentState();
     }
 
     bool m_State;
@@ -154,6 +159,10 @@ public:
     bool SetState(int state, bool force = false);
     int  GetState() {return m_State;}
 
+    void ReportCurrentState() const {
+        Hardware::ReportState("valve", m_State);
+    }
+
 private:
     void ReportFault(const char* s);
     void GetStateFromSwitches();
@@ -166,7 +175,7 @@ private:
     void ReportState(int state)
     {
         m_State = state;
-        Hardware::ReportState("valve", state);
+        ReportCurrentState();
     }
 
     int    m_State;

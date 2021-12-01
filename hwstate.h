@@ -88,9 +88,10 @@ private:
 
     HWState* m_HW;
 
-    Relay * m_Heater;
-    Relay * m_Drain;
-    Switch* m_Pressure;
+    Relay *      m_Heater;
+    Relay *      m_Drain;
+    Switch*      m_Pressure;
+    Thermometer* m_Temperature;
 
     int      m_State;
     WashStep m_washStep;

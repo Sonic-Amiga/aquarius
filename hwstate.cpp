@@ -64,14 +64,16 @@ static const int RefillDelay = 2;
 HeaterController::HeaterController(HWState* hw, HWConfig* cfg)
     : m_HW(hw), m_State(OK), m_washStep(None)
 {
-    m_Heater   = cfg->GetHardware<Relay>("HR");
-    m_Drain    = cfg->GetHardware<Relay>("HD");
-    m_Pressure = cfg->GetHardware<Switch>("HP");
+    m_Heater      = cfg->GetHardware<Relay>("HR");
+    m_Drain       = cfg->GetHardware<Relay>("HD");
+    m_Pressure    = cfg->GetHardware<Switch>("HP");
+    m_Temperature = cfg->GetHardware<Thermometer>("HT");
 
     // We know functions, so we know descriptions
-    m_Heater->m_description = "Heater relay";
-    m_Drain->m_description = "Heater drain";
-    m_Pressure->m_description = "Heater pressure";
+    m_Heater->m_description      = "Heater relay";
+    m_Drain->m_description       = "Heater drain";
+    m_Pressure->m_description    = "Heater pressure";
+    m_Temperature->m_description = "Heater temperature";
 }
 
 void HeaterController::SetState(int state)
@@ -126,6 +128,10 @@ void HeaterController::Control(bool on)
 void HeaterController::Poll(int s_HI)
 {
     int s_HP = m_Pressure->poll();
+
+    // Currently we don't do anything with heater temperature, it's just
+    // for the user, but someone has to poll it, do it here
+    m_Temperature->GetValue();
 
     if (s_HP == Switch::Fault) {
         if (m_State != Fault) {
