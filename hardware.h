@@ -103,10 +103,11 @@ public:
     {
         Fault,
         Cold,
-        Normal
+        Normal,
+        Reset
     };
 
-    Thermometer(float thresh) : m_State(Normal), m_Threshold(thresh), m_LastValue(0)
+    Thermometer(float thresh) : m_State(Reset), m_Threshold(thresh), m_LastValue(0)
     {}
 
     virtual int GetState()
