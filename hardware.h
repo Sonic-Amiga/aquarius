@@ -88,17 +88,23 @@ public:
 
         if (state != m_LastState) {
             m_LastState = state;
-            ReportState("switch", state);
+            ReportState(m_StatePrefix, state);
         }
 
         return state;
+    }
+
+    void SetStatePrefix(const char* s)
+    {
+        m_StatePrefix = s;
     }
 
 protected:
     bool m_activeLow;
 
 private:
-    int m_LastState;
+    int         m_LastState;
+    std::string m_StatePrefix = "switch";
 };
 
 class Thermometer : public Hardware

@@ -87,6 +87,7 @@ private:
 
     void AddLeakSensor(Switch* hw)
     {
+        hw->SetStatePrefix("leak_sensor");
         m_LeakDetectors.push_back(hw);
     }
 

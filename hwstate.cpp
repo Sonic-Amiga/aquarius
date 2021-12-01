@@ -74,6 +74,8 @@ HeaterController::HeaterController(HWState* hw, HWConfig* cfg)
     m_Drain->m_description       = "Heater drain";
     m_Pressure->m_description    = "Heater pressure";
     m_Temperature->m_description = "Heater temperature";
+
+    m_Pressure->SetStatePrefix("pressure_switch");
 }
 
 void HeaterController::SetState(int state)
