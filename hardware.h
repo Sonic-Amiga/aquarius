@@ -11,6 +11,8 @@ class Hardware
 public:
     virtual ~Hardware() {}
 
+    virtual void ReportCurrentState() const {}
+
     std::string m_name;
     std::string m_description;
 
@@ -47,7 +49,7 @@ public:
         return m_State;
     }
 
-    void ReportCurrentState() const
+    void ReportCurrentState() const override
     {
         Hardware::ReportState("relay", m_State);
     }
@@ -73,11 +75,10 @@ public:
     {
         Off,
         On,
-        Fault,
-        Reset
+        Fault
     };
 
-    Switch(bool inverted) : m_activeLow(inverted), m_LastState(Reset)
+    Switch(bool inverted) : m_activeLow(inverted), m_LastState(Off)
     {}
 
     virtual int GetState() = 0;
@@ -88,7 +89,7 @@ public:
 
         if (state != m_LastState) {
             m_LastState = state;
-            ReportState(m_StatePrefix, state);
+            ReportCurrentState();
         }
 
         return state;
@@ -98,6 +99,12 @@ public:
     {
         m_StatePrefix = s;
     }
+
+    void ReportCurrentState() const override
+    {
+        Hardware::ReportState(m_StatePrefix, m_LastState);
+    }
+
 
 protected:
     bool m_activeLow;
@@ -114,11 +121,10 @@ public:
     {
         Fault,
         Cold,
-        Normal,
-        Reset
+        Normal
     };
 
-    Thermometer(float thresh) : m_State(Reset), m_Threshold(thresh), m_LastValue(0)
+    Thermometer(float thresh) : m_State(Normal), m_Threshold(thresh), m_LastValue(0)
     {}
 
     virtual int GetState()
@@ -127,6 +133,12 @@ public:
     }
 
     float GetValue();
+
+    void ReportCurrentState() const override
+    {
+        Hardware::ReportState("thermometer", m_State);
+        Hardware::ReportValue("thermometer", m_LastValue);
+    }
 
 protected:
     virtual float Measure()

@@ -34,14 +34,9 @@ int main(void)
         theConfig->m_HWState->Poll();
 
         if (freshStart) {
-            // We've just booted up and initialized, report state for all the actuators
+            // We've just booted up and initialized, report state for all the hardware units
             // We need to do it only once, actuators will report changes when they happen
-            for (const Valve* v : theConfig->GetHWList<Valve>()) {
-                v->ReportCurrentState();
-            }
-            for (const Relay* r : theConfig->GetHWList<Relay>()) {
-                r->ReportCurrentState();
-            }
+            theConfig->ReportCurrentState();
             freshStart = false;
         }
 

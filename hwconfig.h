@@ -33,41 +33,20 @@ public:
         return m_Parent;
     }
 
-    template<class T>
-    std::vector<T*> GetHWList()
+    void ReportCurrentState() const
     {
-        std::vector<T*> ret;
-
         for (auto& hw : m_hw) {
-            T* typedHW = dynamic_cast<T*>(hw.second);
-
-            if (typedHW)
-                ret.push_back(typedHW);
+            hw.second->ReportCurrentState();
         }
-
-        return ret;
-
+        for (const Switch* hw : m_LeakDetectors) {
+            hw->ReportCurrentState();
+        }
     }
 
     template<class T>
     T* GetHardware(const char* name)
     {
         return dynamic_cast<T*>(m_hw[name]);
-    }
-
-    const std::vector<Valve*> GetValves()
-    {
-        return GetHWList<Valve>();
-    }
-
-    const std::vector<Relay*> GetRelays()
-    {
-        return GetHWList<Relay>();
-    }
-
-    const std::vector<Switch*> GetSwitches()
-    {
-        return GetHWList<Switch>();
     }
 
     const std::vector<Switch*>& GetLeakDetectors()
