@@ -16,6 +16,7 @@
 #include <sstream>
 #include <string>
 
+#include "event_bus.h"
 #include "httpd.h"
 #include "logging.h"
 #include "userdb.h"
@@ -186,37 +187,84 @@ void HTTPServer::Run()
     }
 }
 
-template<class T>
-static void formatStatus(std::ostream& output, const std::vector<T*> hw)
+static void formatStates(std::ostream& output, const char* prefix)
 {
+    size_t l = strlen(prefix) + 1;
+    std::map<std::string, int> states = EventBus::getInstance().CollectValues<int>(prefix);
+    bool first = true;
+
     output << '{';
-    for (size_t i = 0; i < hw.size(); i++) {
-        output << '"' << hw[i]->m_name << "\":" << hw[i]->GetState();
-        if (i < hw.size() - 1) {
-            output << ',';
+
+    for (const auto& it : states) {
+        size_t end = it.first.find('/', l);
+        if (end != std::string::npos) {
+            if (!first)
+                output << ',';
+            first = false;
+            output << '"' << it.first.substr(l, end - l) << "\":" << it.second;
         }
+    }
+
+    output << '}';
+}
+
+struct StateValue
+{
+    int state    = -1;
+    float value = NAN;
+};
+
+static void formatValues(std::ostream& output, const char* prefix)
+{
+    size_t l = strlen(prefix) + 1;
+    std::map<std::string, GValue> states = EventBus::getInstance().CollectValues(prefix);
+    std::map<std::string, StateValue> grouped;
+    bool first = true;
+
+    // Values are given in a nondeterministic order, group them per device
+    for (const auto& it : states) {
+        size_t end = it.first.find('/', l);
+        if (end == std::string::npos)
+            continue;
+
+        std::string name = it.first.substr(l, end - l);
+
+        end++; // 'end' points at '/', move past
+
+        if (!it.first.compare(end, std::string::npos, "state")) {
+            grouped[name].state = std::get<int>(it.second);
+        } else if (!it.first.compare(end, std::string::npos, "value")) {
+            grouped[name].value = std::get<float>(it.second);
+        }
+    }
+
+    output << '{';
+    for (const auto& it : grouped) {
+        if (!first)
+            output << ',';
+        first = false;
+        output << '"' << it.first << "\":{";
+        if (!isnan(it.second.value)) {
+            output << "\"value\":" << it.second.value;
+            if (it.second.state != -1)
+                output << ',';
+        }
+        if (it.second.state != -1) {
+            output << "\"state\":" << it.second.state;
+        }
+        output << '}';
     }
     output << '}';
 }
 
-template<class T>
-void formatValue(std::ostream& output, const std::vector<T*> hw)
+static void formatSingleValue(std::ostream& os, const char* json_name, const char* name)
 {
-    output << '{';
-    for (size_t i = 0; i < hw.size(); i++) {
-        float temp = hw[i]->GetValue();
-        int state = hw[i]->GetState();
+    int state = EventBus::getInstance().getValue<int>(name, -1);
 
-        output << '"' << hw[i]->m_name << "\":{";
-        if (!isnan(temp)) {
-            output << "\"value\":" << temp << ',';
-        }
-        output << "\"state\":" << state << '}';
-        if (i < hw.size() - 1) {
-            output << ',';
-        }
-    }
-    output << '}';
+    if (state == -1)
+        return;
+
+    os << ",\"" << json_name << "\":" << state;
 }
 
 static void formatLog(std::ostream& output, HTTPSession *s)
@@ -243,15 +291,20 @@ static void formatItemStatus(std::ostream& output, const char* id, int state)
 void HTTPServer::formatFullStatus(std::ostream& output, HTTPSession* s)
 {
     output << "{\"valves\":";
-    formatStatus<Valve>(output, m_hwConfig->GetValves());
+    formatStates(output, "valve");
     output << ",\"relays\":";
-    formatStatus<Relay>(output, m_hwConfig->GetRelays());
+    formatStates(output, "relay");
     output << ",\"switches\":";
-    formatStatus<Switch>(output, m_hwConfig->GetSwitches());
+    formatStates(output, "pressure_switch");
     output << ",\"thermometers\":";
-    formatValue<Thermometer>(output, m_hwConfig->GetHWList<Thermometer>());
+    formatValues(output, "thermometer");
     output << ",\"leak_sensors\":";
-    formatStatus<Switch>(output, m_hwConfig->GetLeakDetectors());
+    formatStates(output, "leak_sensor");
+    formatSingleValue(output, "sys", "ValveController/state");
+    formatSingleValue(output, "mode", "ValveController/mode");
+    formatSingleValue(output, "leak", "LeakDetector/state");
+    formatSingleValue(output, "heater", "HeaterController/state");
+
     output << ",\"sys\":" << m_hwState->GetState();
     output << ",\"mode\":" << m_hwState->GetMode();
     output << ",\"leak\":" << m_hwState->GetLeakState();

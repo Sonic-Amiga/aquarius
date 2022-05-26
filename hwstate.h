@@ -35,7 +35,7 @@ private:
     void ReportState(status_t state)
     {
         m_state = state;
-        SendEvent("LeakSensor/state", state);
+        SendEvent("LeakDetector/state", state);
     }
 
     std::vector<Switch*> m_Sensors;
